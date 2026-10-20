@@ -3,7 +3,8 @@
 기준 계획: [BLT-PATCHER.md](BLT-PATCHER.md). 작성일: 2026-10-19.
 
 GitHub: [esoterikosQ/26-14_CACHE](https://github.com/esoterikosQ/26-14_CACHE), `main`.
-2026-10-20 게시 준비 검증: 원격 테스트 22개 및 wheel 빌드 통과.
+2026-10-20 작업 커밋 `67b9375` 푸시 및 원격 main 일치 확인 완료.
+게시 검증: 원격 테스트 22개 및 wheel 빌드 통과.
 5GB 작업은 부모 재현 검사를 지나 후보 표집 단계로 진행했으며 최종 결과는 아직 없다.
 
 단계별 실행·검증·실패·후속 결정은 [log.md](log.md)에 시간 순서로 누적한다.

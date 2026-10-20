@@ -1036,3 +1036,9 @@
 - 로컬 기본 테스트 3개 통과/의존성 부재 19개 skip. 원격 전체 22개 테스트는 모두 통과했다. 기존 환경을 변경하지 않는 `pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/blt-cache-publish-20261020 .`도 통과했다.
 - `git diff --cached --check`는 BLT-PATCHER.md, blt-pipeline-workflow.md, docs/PLAN.md의 기존 사용자 문서 후행 공백 8곳을 보고했다. 실행 오류가 아니며 이번 게시에서 사용자 서식을 임의로 정리하지 않았다.
 - 다음 단계: 현재 작업을 main에 커밋하고 기존 origin으로 일반 푸시한다. 5GB 최종 성능은 아직 없으므로 1GB까지의 결과와 5GB 실행 중 상태를 게시한다.
+
+## 2026-10-20 / GitHub 게시 / 작업 푸시 및 원격 일치 확인
+
+- 작업 커밋 `67b93750c6847fa9d1c527a8489f8bb9e2434106` (`Add count patcher research and background scaling experiments`)을 생성하고 `git push origin main`에 성공했다. 48개 파일의 코드·테스트·문서·설정·소규모 근거를 게시했다.
+- `git rev-parse HEAD`와 `git ls-remote origin refs/heads/main`이 같은 SHA를 반환했고 작업 트리는 깨끗했다. GitHub 저장소는 `https://github.com/esoterikosQ/26-14_CACHE`다. 강제 푸시나 브랜치 생성은 하지 않았다.
+- 이 완료 기록도 별도 문서 커밋으로 같은 main에 게시한다. 진행 중인 원격 5GB 실험과 데이터·가중치에는 변경하지 않았다. 이후 서버 로그를 회수할 때 이 로컬 게시 기록을 보존해 병합한다.
