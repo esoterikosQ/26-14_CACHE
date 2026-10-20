@@ -1,0 +1,12 @@
+{
+  "run_id": "en-patcher-bg100-20261019-01",
+  "baseline_config": "experiments/english_patcher_pilot.json",
+  "sources": "evidence/english_dataset_sources_20261019.json",
+  "background_utf8_bytes": 100000000,
+  "sampling_seed": 20261020,
+  "wall_clock_limit": null,
+  "tmux_session": "blt-bg100-20261019",
+  "comparison": "Nested 10MB to 100MB background; fixed existing train/validation labels, K=8, W=unlimited, alpha=kappa=lambda=eta=1, rho=.001",
+  "sampling": "Same pinned FineWeb revision and four shards; random row groups and rows, then length-stratified selection; retain original background",
+  "heldout": "Read heldout raw text only to exclude duplicate background candidates; never read heldout labels or evaluate heldout scores"
+}

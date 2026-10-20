@@ -1,0 +1,181 @@
+{
+  "stage": "T06-labels",
+  "run_id": "en-patcher-20261019-01",
+  "status": "generated",
+  "contract": {
+    "protocol": {
+      "version": 1,
+      "maximum_input_ids": 2048,
+      "bos_id": 1,
+      "eos_id": 2,
+      "pad_id": 3,
+      "input": "Original UTF-8 bytes plus 4, with BOS per chunk; no appended EOS or padding",
+      "chunking": "Consecutive nonoverlapping chunks of at most 2047 bytes; byte offsets, not character offsets",
+      "state": "Teacher and candidate context/online counts reset per chunk; no state carried between chunks",
+      "alignment": "H[i] from logit i-1; starts 0 and 1 forced; include virtual next-ID position n; H[0]=0 sentinel",
+      "evaluation": "Only positions 2..n inclusive; empty text rejected; no final-test access",
+      "prefix_diagnostic": "First three validation documents, first chunk only, distinct prefix lengths 64/128/256/n"
+    },
+    "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+    "conversion_sha256": "00805ed1d402de791c531df2d124d47333a4199b8853516f4b01c06c85cdd441",
+    "owner_source_sha256": {
+      "blt_hf/__init__.py": "4981c134e251b71df4d0b14388007d103ca98567a13ea544e54bf532797424a8",
+      "blt_hf/attention.py": "6dc89cb026dc4415cfc275383ea6fbf75f95db72a35814993e1e85386a3fdee6",
+      "blt_hf/cache/frontier.py": "bde21cf5447207e6a73e08bfe5515e6d9c18f0dd2e0ba87ebf0e034808872bf4",
+      "blt_hf/cache/global_reuse.py": "dd54916cb7882ee136426fec86a86afb93afdc84c135f3fe546a019af9019813",
+      "blt_hf/checkpoint.py": "441e5f630f5779b133f029512f7fe08f8cb9fac962bfb14ce17f8ddd2e8ef293",
+      "blt_hf/data_adapter.py": "9608c6103f76aae80cb0e10c14dd222db489d52f05ff21c049434c7a03131832",
+      "blt_hf/eval.py": "e307eb7824ce27bacad0f865b28ecb361e08b5fd830cc2c87874cce923238fea",
+      "blt_hf/evaluation.py": "6c8516ae2b2a60af997bb892f042748d5d50c7d384e5209bd65aab5a36e197a1",
+      "blt_hf/generation.py": "3ac36e3151ac250d2178cfeef0e01fdb12942db55e8ed47557f5c99fe22904a8",
+      "blt_hf/m2_resumable.py": "c0eba88f6ee01aae4ded8a9264644f43065b6086828539b9a33f00724c4352ac",
+      "blt_hf/manifest.py": "c54859dd99477cd521b61643abe881a9fff563e5f199e9901c2a753c26db8e4c",
+      "blt_hf/metrics.py": "afaae2f69cd28b37a18bf79f0bcb716ab27616bfb918b60606ca4fd3bcd0320a",
+      "blt_hf/model.py": "028ea6d9223dc76626f6571283681c017665df93bbadb4a9d1afa55a1c68a242",
+      "blt_hf/patched/__init__.py": "ca61cf5b07d487894b00924fe9c7c669a57d5ed59bb7af76603e27cd6a949af6",
+      "blt_hf/patched/modeling_blt.py": "61719aa2f0050ad4eb48eee9fbc941bd0de6f7110ccd528359cf096848302746",
+      "blt_hf/patching.py": "d8414c0753f9d750ae31ca8fb6fd156c2481b3f69ecd95bae9f206b432d13ad4",
+      "blt_hf/runtime.py": "d50087f8862795ee30ad4c96169894a2d4e029ac3309f759fcf8ecdb4727e075",
+      "blt_hf/train.py": "ac4c5feb1997a8277fe3ec7a3e007d9709405d759ee432bf947ce38aef7eabf4",
+      "blt_hf/training.py": "6135611603be7b43d3182c23ad96cdfcf03e7705d44f9caed683887e6d1585d6",
+      "blt_hf/vendor/__init__.py": "4aba398412abcb77a0d1dacd461466d900ad5c7510c8b87bfd627f4d145e6537",
+      "blt_hf/vendor/gleu.py": "ce2be2a7dcd2d77f034cf3d25f9bb6cf197766eb18e4d6ee2fb2a627f1c8f96a",
+      "blt_hf/vendor/gleumodule_legacy.py": "d6bfbf85b6210ebea4faf1b582779695c0a82612f0b0615683cacf434ea1e962",
+      "blt_hf/vendor/m2/__init__.py": "18234e72c47691b338a80c6d8959e8b7255551a262b500a2e0119b5ef5ca7c0c",
+      "blt_hf/vendor/m2/levenshtein.py": "1134a7a423f008d1579b5da56ceefccadf7d790be1869285352fc5d3d320bd9c",
+      "blt_hf/vendor/m2/m2scorer.py": "f4cc747db8d8e40a9a52437e1b8a84e71909ee2425829c0d7ff79be9434463ad",
+      "blt_hf/vendor/m2/util.py": "72300f1ab12fc84ab78a1b331f4859d5740ac928786dd21f2e378f298d282338"
+    }
+  },
+  "contract_sha256": "46df5b7b291c2f6c2452f303b685fc4681297d6039717f45942c8c0823099056",
+  "splits": {
+    "train": {
+      "documents": 898,
+      "chunks": 2488,
+      "input_ids": 4044132,
+      "positions": 4041644,
+      "boundaries": 888053,
+      "patches": 893029,
+      "patch_slots": 4046620,
+      "reused_chunks": 2488,
+      "same_shape_replays": 1,
+      "manifest_sha256": "b9617ebfb84ce5108385544dde2c103f6bedd117ffe912a3f1f14a57e4e6ae3f",
+      "teacher_mean_patch_length": 4.5313422072519485
+    },
+    "validation": {
+      "documents": 111,
+      "chunks": 290,
+      "input_ids": 464060,
+      "positions": 463770,
+      "boundaries": 104640,
+      "patches": 105220,
+      "patch_slots": 464350,
+      "reused_chunks": 290,
+      "same_shape_replays": 1,
+      "manifest_sha256": "0d10c09f804d17581451a5bc68a5d4d47711a5baf5771c290406e34d2e55b9f1",
+      "teacher_mean_patch_length": 4.41313438509789
+    }
+  },
+  "prefix_diagnostics": [
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 64,
+      "full_entropy": 0.021728515625,
+      "prefix_entropy": 0.021728515625,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.000202178955078125,
+      "prefix_entropy": 0.00021266937255859375,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.16796875,
+      "prefix_entropy": 0.1669921875,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 684,
+      "full_entropy": 0.9375,
+      "prefix_entropy": 0.9375,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 64,
+      "full_entropy": 1.0625,
+      "prefix_entropy": 1.0546875,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.56640625,
+      "prefix_entropy": 0.56640625,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.0003604888916015625,
+      "prefix_entropy": 0.00035858154296875,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 928,
+      "full_entropy": 1.5078125,
+      "prefix_entropy": 1.5078125,
+      "full_label": true,
+      "prefix_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 64,
+      "full_entropy": 2.046875,
+      "prefix_entropy": 2.03125,
+      "full_label": true,
+      "prefix_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 128,
+      "full_entropy": 2.953125,
+      "prefix_entropy": 2.953125,
+      "full_label": true,
+      "prefix_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.73046875,
+      "prefix_entropy": 0.73046875,
+      "full_label": false,
+      "prefix_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 1012,
+      "full_entropy": 0.84765625,
+      "prefix_entropy": 0.84765625,
+      "full_label": false,
+      "prefix_label": false
+    }
+  ],
+  "effective_threshold": 1.3359375,
+  "peak_gpu_reserved_bytes": 511705088,
+  "elapsed_seconds": 7.685081369243562,
+  "peak_host_rss_bytes": 2007203840
+}

@@ -1,0 +1,33 @@
+{
+  "stage": "T06-background",
+  "run_id": "en-patcher-20261019-01",
+  "status": "built",
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "source_sha256": "6b14a9da38a3c3c5369b8f6028bcd02a15806676b2a0d7ae4e50f9c63fb513ae",
+  "count_config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "documents": 2241,
+  "input_ids": 10003550,
+  "protocol": "BOS plus original UTF-8 IDs, no appended EOS; reset context per original document; no pruning",
+  "code_sha256": {
+    "/home/itcmaster/projects/blt-cache/source/scripts/build_count_background.py": "f7c98b070eb24915baf9f29edffbbe34e949add29aa05531f0139a7517afbc30",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/count_patcher.py": "e0051ce24d77abdcbb57e60b78c3407058e22eb8c4df062280e6ff2eba144e57"
+  },
+  "build_seconds": 35.99959990615025,
+  "contexts": 6909867,
+  "edges": 10895458,
+  "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-20261019-01/background_k8.jsonl",
+  "table_sha256": "19143f0c65747390f487139898dddfa49600c27c98912f649519ffd3bf310ce3",
+  "table_bytes": 326063930,
+  "elapsed_seconds": 45.055444572120905,
+  "peak_host_rss_bytes": 2698108928
+}

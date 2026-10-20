@@ -1,50 +1,128 @@
-# Cache development plan after project split
+# BLT CACHE 개발 계획
 
-## Current baseline
 
-The guarded beam-1/batch-1 global cache is the reference implementation.
-It rechecks entropy patching and the local encoder for every byte, skips the
-global forward only when the patch starts are unchanged, and refreshes full
-forward for close top-two legal byte logits. Decoder KV reuse remains off.
-The native A100 validation output parity and measured speed are documented
-in `HANDOFF.md` and `evidence/p3a_native_full_guarded_11.json`.
+## 목표
 
-## Next work in this repository
+- BLT의 작동 속도를 높이기 위한 캐시를 파이썬 라이브러리 형태로 제작해서 깃허브에 공개
 
-1. Make the copied package reproducible: install it in the prepared BF16
-   environment, run package tests, and run a short actual 1B OSC model smoke
-   using the import `from phdq_blt_cache import GlobalPrefixReuse`. Verify
-   that the installed copy exactly reproduces the current local implementation
-   before changing cache behavior.
-2. Profile guarded generation on itcerdo using the same model, prompts, dtype,
-   and GPU for baseline and candidate. Report first-call and steady-state
-   costs separately for entropy/patcher, local encoder, global transformer,
-   and local decoder; record patch changes and guard refreshes. Do not use
-   5090 timings to claim A100 improvement.
-3. Improve one reuse component at a time. For local encoder reuse or more
-   aggressive global reuse, specify the exact patch-frontier invalidation,
-   positions, masks, BF16 shape effects, and fallback rule. Preserve the
-   baseline guarded backend and give each new candidate a distinct name.
-   Decoder KV caching is an optional separate experiment; prior measurements
-   did not show a speed benefit. Do not assume it is required for the next
-   speedup.
-4. Compare every generated token ID, EOS, UTF-8 validity, and final string
-   against uncached generation on identical inputs. Start with adversarial
-   prefixes and short complete sentences, then ask the user to run full native
-   validation on Neuron A100 if the candidate passes. Record mismatches,
-   generation-only time, p50/p95, and peak memory. Other datasets and beam 4
-   need their own verification.
-5. Once the user-provided Neuron evidence supports adoption, hand the
-   candidate's Git commit and API contract to `phdq3`. Update only a new BLT
-   run after the currently queued native job is finished. Pin the package
-   commit and include that external source identity in train/eval manifests.
+- 캐시를 사용했을 때와 사용하지 않았을 때의 출력물 동일성을 보장하는 것이 조건
 
-## Acceptance for a candidate
 
-Correctness is first: the candidate must match the corresponding HF no-cache
-generation output for the claimed model, split, beam, batch, and device
-conditions. Measure a real generation-time improvement without counting
-load/setup as generation. Report all conditions and residual limits. Do not
-use a previous run's output directory or checkpoint identity for changed
-cache code. Performance targets are goals, not a reason to discard a correct
-candidate without reviewing its tradeoffs with the user.
+
+## 현재까지 구현 상황
+
+- 테스트 데이터를 기준으로 각각의 바이트마다 엔트로피 패칭과 로컬 인코더를 확인해서 패치 시작점이 달라지지 않은 경우에 global ff를 건너뛰고 이전 계산한 값을 재사용하도록 구현
+
+- 디코더 단계에서 KV를 재사용하는 실험을 진행했으나 속도상 이점이 없고 오히려 정확성이 떨어지는 문제가 발생해서 현재는 코드만 남겨놓고 활성화되어있지 않음
+
+
+## 착안점
+
+- BLT는 개념상 입력하는 문장이 고정되고 패치 경계가 바뀌지 않으면 로컬 인코더 - 전역 TF - 로컬 디코더를 거치는 입력값 및 계산 결과가 변하지 않고 재사용이 가능해야 한다. 그리고, 각 단계의 어텐션 마스크는 장래의 값을 참조하지 않기 때문에 $q$기에 생성하는 바이트가 패치 경계와 연결되지 않는 한 $q+1$기에 사용하는 입력 데이터(바이트 벡터값과 패치 경계 정보)는 $q$기에 생성한 추가 바이트 외에 다르지 않아야 한다.
+
+- 
+
+
+## 원인 진단과 최적화 원칙
+
+궁극적인 목표는 캐시를 쓰지 않는 동일 조건의 생성보다 **최종 결과물을 바꾸지 않고
+생성 시간을 줄이는 것**이다. 패처, 로컬 인코더, 전역 트랜스포머, 로컬 디코더의
+중간 텐서나 로짓이 비트 단위로 같을 필요는 없다. 생성된 모든 바이트 ID, EOS,
+UTF-8 유효성, 최종 문자열의 일치 여부를 후보별로 검증하고, 생성 시간과 메모리를
+함께 측정한다. 기존 가드 구현의 A100 출력 일치는 빔 1·배치 1의 한 구성에
+한정되며, 새 재사용 규칙의 일치를 보증하지 않는다.
+
+우선 입력 연장 시 과거 경계와 상태가 달라지는 원인을 분리한다.
+`../evidence/p3a_patch_causality_20260926_v2.json`에서는 혼합 합성 입력의
+접두부 5개에서 시작점 19의 임계값 판정이 뒤집혔다. 같은 길이의 재실행은
+동일했지만, 입력 길이가 달라지면 위치 0부터 엔트로피 차이가 기록됐다.
+`../evidence/p3a_state_stability_repeat_20260926.json`에서는 경계가 같아도
+닫힌 인코더·전역 패치 상태가 달라질 수 있었다. 특정 커널이나 마스크가
+원인이라고 아직 확정하지 않는다. 합성 문자열의 위치 19를 실제 GEC의 오류문
+경계 변화로 해석하지 않는다.
+
+1. 동일 길이에서 비교 위치 **뒤의 바이트만** 바꿔 과거 패처 엔트로피와
+    경계를 비교한다. 다르면 마스크·위치·세그먼트 처리 등 인과성 위반을 먼저
+    조사한다. 실제 GEC 생성에서는 오류문, 구분자, 생성 교정문의 바이트 구간과
+    바뀐 시작점을 함께 기록해 변화 위치를 구분한다.
+2. 같은 바이트 접두부를 단독 실행하거나 뒤에 바이트를 붙여 실행해, 처음
+    달라지는 연산을 패처의 임베딩, 각 레이어의 정규화·투영·RoPE·어텐션·MLP,
+    로짓·엔트로피 순서로 찾는다. 같은 가중치·GPU·자료형·마스크에서 BF16,
+    FP32, TF32 설정과 연산 형상을 통제해 수치 차이와 인과성 오류를 구별한다.
+    같은 길이 반복 결과와 임계값 양쪽의 엔트로피도 기록한다.
+3. 경계가 같거나 양쪽에 동일한 경계를 주입한 비교에서 로컬 인코더, 전역
+    트랜스포머, 로컬 디코더의 첫 차이를 각각 찾는다. 열린 마지막 패치,
+    가상 다음 바이트, EOS, 위치 및 교차 어텐션 마스크를 별도로 확인한다.
+    단계별 차이는 무효화 범위를 설계하기 위한 단서이지, 그 자체로 후보의
+    채택 실패 조건은 아니다.
+
+## 단계별 재사용 후보
+
+- 패처: 인과적 엔트로피 계산의 확정 접두부나 제한된 윈도 상태를 재사용하고
+   새 바이트 근처만 계산할 수 있는지 검사한다. BF16 임계값 부근이나 경계
+   불일치에서는 필요한 구간을 재계산한다.
+- 로컬 인코더: 바이트·해시 임베딩과 닫힌 패치 표현의 재사용을 분리한다.
+   열린 패치와 그 의존 구간만 갱신하되 경계 변경, 어텐션 범위 및 위치를
+   고려해 닫힌 상태의 무효화 범위를 정한다.
+- 전역 트랜스포머: 확정된 공통 패치 접두부의 상태 또는 KV 재사용과
+   바뀐 꼬리의 계산을 비교한다. 기존의 전체 전역 건너뛰기와 경계 변경 시
+   전체 재계산을 기준으로, 더 정교한 재사용이 실제로 빠른지 확인한다.
+- 로컬 디코더: 바이트 자기 어텐션 KV 및 패치 교차 어텐션 상태를 구분해
+   재사용한다. 교정문 길이 증가나 패치 경계 변경 시 의존성을 점검하며,
+   이전 디코더 KV 실험에는 지속적인 속도 이득이 없었으므로 별도 후보로 둔다.
+
+각 후보는 한 단계씩 선택적으로 적용하고, 변경된 경계나 불확실한 상태는
+재계산하는 대체 경로를 유지한다. 중간 활성값이 달라도 최종 생성이 같을 수
+있지만, 이를 가정해 재사용을 허용하지 않는다. 동일 조건의 캐시 미사용 생성과
+완성된 출력 전체를 비교한 뒤, 첫 호출 및 안정 상태의 단계별 시간,
+생성 전체 시간, p50/p95, 재계산 횟수와 최대 메모리를 측정한다. 구현 복잡도나
+재계산 비용이 이득을 상쇄하면 그 후보를 채택하지 않는다.
+
+
+
+
+
+## 현재 기준 구현
+
+가드가 적용된 빔 1·배치 1 전역 캐시를 기준 구현으로 삼는다.
+이 구현은 바이트마다 엔트로피 패칭과 로컬 인코더를 다시 확인하고, 패치 시작점이
+바뀌지 않았을 때만 전역 순전파를 건너뛴다. 허용된 바이트의 상위 두 로짓 값이
+가까우면 전체 순전파를 새로 수행한다. 디코더 KV 재사용은 계속 비활성화한다.
+네이티브 A100 검증의 출력 일치 여부와 측정된 속도는 `HANDOFF.md`와
+`evidence/p3a_native_full_guarded_11.json`에 기록되어 있다.
+
+## 이 저장소의 다음 작업
+
+1. 복사한 패키지를 재현 가능하게 만든다. 준비된 BF16 환경에 설치하고 패키지 테스트를
+   실행한 뒤, `from phdq_blt_cache import GlobalPrefixReuse`로 가져와 실제 1B
+   OSC 모델을 짧게 시험한다. 캐시 동작을 바꾸기 전에 설치된 패키지가 현재 로컬
+   구현과 정확히 같은 결과를 내는지 확인한다.
+2. 기준 구현과 후보에 동일한 모델, 프롬프트, 자료형, GPU를 사용하여 itcerdo에서
+   가드가 적용된 생성 과정을 프로파일링한다. 엔트로피/패처, 로컬 인코더, 전역
+   트랜스포머, 로컬 디코더의 첫 호출 비용과 안정 상태 비용을 각각 보고하고,
+   패치 변경과 가드로 인한 재계산 횟수를 기록한다. 5090 측정 시간으로 A100의
+   성능 향상을 주장하지 않는다.
+3. 한 번에 재사용 요소 하나씩 개선한다. 로컬 인코더 재사용이나 더 적극적인 전역
+   재사용을 시도할 때는 패치 경계의 무효화 조건, 위치, 마스크, BF16에서 텐서
+   형태가 미치는 영향, 대체 실행 규칙을 정확히 명시한다. 기준 가드 백엔드를
+   유지하고 새 후보마다 서로 다른 이름을 붙인다. 디코더 KV 캐싱은 선택적인 별도
+   실험이며, 이전 측정에서는 속도 이점이 없었다. 다음 성능 향상에 필수라고
+   가정하지 않는다.
+4. 동일한 입력에서 캐시를 사용하지 않는 생성 결과와 생성된 모든 토큰 ID, EOS,
+   UTF-8 유효성, 최종 문자열을 비교한다. 불리한 접두사와 짧은 완결 문장으로
+   시작하고, 후보가 통과하면 사용자에게 Neuron A100에서 전체 네이티브 검증을
+   실행해 달라고 요청한다. 불일치, 생성에만 걸린 시간, p50/p95, 최대 메모리
+   사용량을 기록한다. 다른 데이터셋과 빔 4는 각각 별도 검증이 필요하다.
+5. 사용자가 제공한 Neuron 검증 자료가 도입을 뒷받침하면 후보의 Git 커밋과 API
+   계약을 `phdq3`에 전달한다. 현재 대기 중인 네이티브 작업이 끝난 뒤 새 BLT
+   실행에만 적용한다. 패키지 커밋을 고정하고 학습/평가 매니페스트에 외부 소스의
+   식별 정보를 포함한다.
+
+## 후보의 채택 기준
+
+정확성이 우선이다. 후보는 적용을 주장하는 모델, 데이터 분할, 빔, 배치, 장치 조건에서
+해당 HF 캐시 미사용 생성 결과와 일치해야 한다. 모델 로드나 설정 시간을 생성
+시간에 포함하지 않고 실제 생성 시간의 개선을 측정한다. 모든 조건과 남아 있는
+한계를 보고한다. 캐시 코드가 변경되었다면 이전 실행의 출력 디렉터리나 체크포인트
+식별 정보를 재사용하지 않는다. 성능 목표는 목표일 뿐이며, 사용자와 장단점을
+검토하지 않고 정확한 후보를 버릴 이유가 되지 않는다.

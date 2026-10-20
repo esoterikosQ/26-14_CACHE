@@ -1,0 +1,26 @@
+{
+  "status": "built",
+  "run_id": "en-patcher-bg100-20261019-01",
+  "count_config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "documents": 20947,
+  "input_ids": 100021366,
+  "utf8_bytes": 100000419,
+  "contexts": 30948756,
+  "edges": 52607109,
+  "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg100-20261019-01/background_k8.jsonl",
+  "table_sha256": "36e21f7c5420ca8a2fe49c62e1aa3f324d97233cb2670d5c35c8917f32b0e5a4",
+  "table_bytes": 1506425405,
+  "build_seconds": 430.21834242297336,
+  "elapsed_seconds": 471.8086334178224,
+  "peak_host_rss_bytes": 11869417472
+}

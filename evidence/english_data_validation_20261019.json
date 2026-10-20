@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "splits": {
+    "background": {
+      "documents": 2241,
+      "utf8_bytes": 10001309,
+      "hash_and_exact_dedup_passed": true
+    },
+    "train": {
+      "documents": 898,
+      "utf8_bytes": 4041644,
+      "hash_and_exact_dedup_passed": true
+    },
+    "validation": {
+      "documents": 111,
+      "utf8_bytes": 463770,
+      "hash_and_exact_dedup_passed": true
+    },
+    "test": {
+      "documents": 113,
+      "utf8_bytes": 495516,
+      "hash_and_exact_dedup_passed": true
+    },
+    "wikipedia_test": {
+      "documents": 220,
+      "utf8_bytes": 1002062,
+      "hash_and_exact_dedup_passed": true
+    }
+  },
+  "encoding_mismatches": [],
+  "near_duplicate_method": "Global casefold/whitespace-normalized SHA256 and exact URL; 5-word MinHash 128 permutations, LSH and estimated Jaccard >= 0.8; approximate detection, not an exhaustive guarantee",
+  "duplicates_removed": {},
+  "model_vocab_size": 260,
+  "tokenizer_registered_entries": 261
+}

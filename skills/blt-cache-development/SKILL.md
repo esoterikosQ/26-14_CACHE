@@ -20,9 +20,11 @@ settings. Record code and model identities, guard refreshes, generation-only
 time, and memory. A few matching prefixes do not establish full-split parity.
 The existing guarded native A100 parity is limited to beam 1 and batch 1.
 
-Run local package tests first. Itcerdo permits BF16 inference/profiling only
-within the user's existing `/home/itcmaster/projects/phdq3` tree. Prepare
-Neuron commands and analyze returned logs; the user handles Neuron access and
+Run local package tests first. Itcerdo is the user's personally managed
+server; the 2026-10-19 clarification removes the former inference-only and
+project-path limits. Training is permitted within requested tasks; preserve
+existing jobs, environments, and data. Prepare Neuron commands and analyze
+returned logs; the user handles Neuron access and
 submissions. Integrate into `phdq3` only after the running training job ends,
 pin the package Git commit, and add that external code identity to run/eval
 manifests before a new run uses it.

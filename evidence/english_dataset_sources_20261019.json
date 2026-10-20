@@ -1,0 +1,33 @@
+{
+  "run_id": "en-patcher-20261019-01",
+  "status": "metadata_resolved",
+  "text_downloaded": false,
+  "seed": 20261019,
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "sources": [
+    {
+      "repository": "HuggingFaceFW/fineweb",
+      "requested_revision": "v1.4.0",
+      "resolved_revision": "9bb295ddab0e05d785b879661af7260fed5140fc",
+      "prefix": "data/CC-MAIN-2025-05/",
+      "available_shards": 300,
+      "selected_shards": [
+        "data/CC-MAIN-2025-05/003_00015.parquet",
+        "data/CC-MAIN-2025-05/001_00011.parquet",
+        "data/CC-MAIN-2025-05/002_00008.parquet",
+        "data/CC-MAIN-2025-05/004_00040.parquet"
+      ]
+    },
+    {
+      "repository": "wikimedia/wikipedia",
+      "requested_revision": "main",
+      "resolved_revision": "b04c8d1ceb2f5cd4588862100d08de323dccfbaa",
+      "prefix": "20231101.en/",
+      "available_shards": 41,
+      "selected_shards": [
+        "20231101.en/train-00034-of-00041.parquet",
+        "20231101.en/train-00018-of-00041.parquet"
+      ]
+    }
+  ]
+}

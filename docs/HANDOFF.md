@@ -46,11 +46,13 @@ GitHub without installing it.
 ## Host and data boundaries
 
 - Mac: edit code, run pure Python checks, review JSON evidence.
-- Itcerdo: the user's prior authorization is for BF16 inference and profiling
-  inside `/home/itcmaster/projects/phdq3`; no optimizer, backward, or
-  fine-tuning. A separate Git repository checkout can be placed under that
-  allowed tree without turning it into a `phdq3` Git worktree. Model files
-  remain read-only inputs, not Git content.
+- Itcerdo: the user clarified on 2026-10-19 that this is their personally
+  managed server with no separate host restrictions. This supersedes the
+  former BF16 inference/profiling-only and project-path limits; CPU/GPU
+  optimization, backward, fine-tuning, and pretraining are permitted within
+  requested tasks. Choose experiment paths and resource budgets explicitly,
+  preserve existing jobs and source checkpoints, and keep model files and
+  training artifacts out of this package's Git content.
 - Neuron: only the user connects, transfers, and submits Slurm jobs. Prepare
   commands and analyze returned logs here. Do not ask the user to interrupt
   the currently queued native training job for this extraction.

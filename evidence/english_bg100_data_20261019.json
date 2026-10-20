@@ -1,0 +1,248 @@
+{
+  "status": "prepared",
+  "run_id": "en-patcher-bg100-20261019-01",
+  "documents": 20947,
+  "utf8_bytes": 100000419,
+  "length_bands": {
+    "short": 8099,
+    "medium": 8098,
+    "long": 4750
+  },
+  "candidate_documents": 50567,
+  "duplicates_removed": {},
+  "source": {
+    "repository": "HuggingFaceFW/fineweb",
+    "requested_revision": "v1.4.0",
+    "resolved_revision": "9bb295ddab0e05d785b879661af7260fed5140fc",
+    "prefix": "data/CC-MAIN-2025-05/",
+    "available_shards": 300,
+    "selected_shards": [
+      "data/CC-MAIN-2025-05/003_00015.parquet",
+      "data/CC-MAIN-2025-05/001_00011.parquet",
+      "data/CC-MAIN-2025-05/002_00008.parquet",
+      "data/CC-MAIN-2025-05/004_00040.parquet"
+    ]
+  },
+  "row_groups_read": [
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 45
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 111
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 181
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 147
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 720
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 508
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 327
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 71
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 96
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 935
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 670
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 354
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 661
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 75
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 474
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 879
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 526
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 410
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 282
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 509
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 900
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 796
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 117
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 0
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 531
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 138
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 715
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 376
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 792
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 696
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 215
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 643
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 493
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 925
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 889
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 139
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 253
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 413
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 627
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 893
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 496
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 713
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 105
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 44
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 639
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 162
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 554
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 523
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 282
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 197
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 420
+    },
+    {
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 633
+    }
+  ],
+  "original_background_documents_retained": 2241,
+  "original_split_hashes": {
+    "background": "6b14a9da38a3c3c5369b8f6028bcd02a15806676b2a0d7ae4e50f9c63fb513ae",
+    "train": "9de457e8c4fd7edb288a9bb678e2bc6edcb4e57da91f4f240a9abfc5e10066f1",
+    "validation": "c003140c455046497a53ab096dfc384f7a3ebfc346f1e5dc7aea4583df66b697",
+    "test": "d6f7b14ef862a1c076f4cce7f2d0028f8c08913f8c9abc6c3ed54f3c216d4eec",
+    "wikipedia_test": "fb9832076db21acbc17aaa1b4b96259a5ad06b09d9a6765e12db8c45f53d77f7"
+  },
+  "deduplication": "Same normalized-text/URL and 5-word MinHash128 LSH .8 policy; existing five splits protected; approximate, not exhaustive",
+  "file_sha256": "9ed1c4f93beb9d77d0a116e5133cc6a9c5fcf8aabec12b0a483323f3e8399ddd",
+  "elapsed_seconds": 110.19228679034859,
+  "peak_host_rss_bytes": 961056768
+}

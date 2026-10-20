@@ -284,6 +284,10 @@ OSC에서 cache 입력을 거부하며 `BltModel.forward()`의 global transforme
 
 ## 소스와 운영 제약
 
+아래는 당시 실험의 제약이다. 2026-10-19 사용자 확인으로 itcerdo의
+추론 전용·학습 금지 제한은 해제되었다. 현재 운영 규칙은
+[HANDOFF.md](HANDOFF.md)의 호스트 경계를 따른다.
+
 - 모델 가중치·tokenizer·학습 코드는 변경하지 않는다. `blt_gec/`, 원본
   데이터, site-packages도 수정하지 않는다.
 - Neuron에 에이전트가 접속하지 않는다. itcerdo는 사용자 제공 환경에서

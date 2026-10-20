@@ -1,0 +1,12 @@
+{
+  "status": "verified",
+  "parent_report_sha256": "e60706122fad3ba865a1c49e33ff3bfdaa7959852bfb1bc463b43a7fd6ab6c94",
+  "validation_f1": 0.7144561038961039,
+  "validation_documents": 111,
+  "training_feature_chunks": 6,
+  "required_contexts": 836615,
+  "loaded_contexts": 733758,
+  "full_contexts": 30948756,
+  "elapsed_seconds": 188.2676539211534,
+  "peak_host_rss_bytes": 12497739776
+}

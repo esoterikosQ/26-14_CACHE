@@ -1,0 +1,43 @@
+{
+  "status": "compared",
+  "run_id": "en-patcher-bg100-20261019-01",
+  "baseline_report_sha256": "9ecb309e4e9c7f1eadbe7980c4a390bd294520b2b94007f02852142ca63eef41",
+  "candidate_report_sha256": "e60706122fad3ba865a1c49e33ff3bfdaa7959852bfb1bc463b43a7fd6ab6c94",
+  "baseline": {
+    "f1": 0.6258061599662468,
+    "precision": 0.5165033330016914,
+    "recall": 0.7937882262996941,
+    "entropy_mae": 0.7524936310116634,
+    "entropy_rmse": 1.0022703488364895,
+    "entropy_spearman": 0.647816865282723,
+    "log_loss": 0.35068070843329735,
+    "auprc_average_precision": 0.6811512637347724,
+    "candidate_patch_count": 161396,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 2.877084933951275
+  },
+  "expanded": {
+    "f1": 0.7144561038961039,
+    "precision": 0.6321138360848623,
+    "recall": 0.8214640672782875,
+    "entropy_mae": 0.5735347575814088,
+    "entropy_rmse": 0.811900178387024,
+    "entropy_spearman": 0.7617067161732146,
+    "log_loss": 0.2904948987161756,
+    "auprc_average_precision": 0.7673257028848888,
+    "candidate_patch_count": 136565,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 3.400212353091934
+  },
+  "baseline_threshold": 0.25,
+  "expanded_threshold": 0.28125,
+  "f1_difference": 0.08864994392985714,
+  "paired_document_bootstrap_difference_95ci": [
+    0.0837005310504829,
+    0.0926197235751663
+  ],
+  "baseline_replay_matches": true,
+  "documents": 111,
+  "quality_gate_passed": false,
+  "limitations": "Same validation reused for threshold selection; descriptive paired interval, not independent test evidence. Sampling composition may change with volume. No downstream BPB/speed or heldout evaluation."
+}

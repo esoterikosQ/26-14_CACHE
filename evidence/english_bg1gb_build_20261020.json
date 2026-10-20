@@ -1,0 +1,387 @@
+{
+  "status": "built",
+  "run_id": "en-patcher-bg1gb-20261020-01",
+  "storage": "document_blocks_v1",
+  "count_config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "documents": 217669,
+  "input_ids": 1000218624,
+  "utf8_bytes": 1000000955,
+  "blocks": [
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00000.jsonl",
+      "table_sha256": "48c5d140ef079f966394793045033bc4676f90be2f45f2300c8966cb3977fe9c",
+      "table_bytes": 597268295,
+      "documents": 4767,
+      "utf8_bytes": 25005291,
+      "contexts": 12480893,
+      "edges": 20349195
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00001.jsonl",
+      "table_sha256": "bd2e408b2f0cf17f044162513c8d40f3bb6596c728e226a39f7030707c3e3f6b",
+      "table_bytes": 593955276,
+      "documents": 3960,
+      "utf8_bytes": 25020142,
+      "contexts": 12396031,
+      "edges": 20260152
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00002.jsonl",
+      "table_sha256": "e4c9d4f152b29f27a16b5b8cb5cb74f6b38603cc2d3650b27c1a87643e9c5e6f",
+      "table_bytes": 594690576,
+      "documents": 4125,
+      "utf8_bytes": 25001075,
+      "contexts": 12409517,
+      "edges": 20289780
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00003.jsonl",
+      "table_sha256": "097806b2c800aef517a943c5725425ebc07405a82b4f449821bdcd417f76a982",
+      "table_bytes": 624104624,
+      "documents": 8101,
+      "utf8_bytes": 25009387,
+      "contexts": 13071460,
+      "edges": 21217478
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00004.jsonl",
+      "table_sha256": "29f2cff4408a7a6b4dee4bba2644651da49187923097702b0570bf2f0616897e",
+      "table_bytes": 594662621,
+      "documents": 4188,
+      "utf8_bytes": 25004956,
+      "contexts": 12414670,
+      "edges": 20283710
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00005.jsonl",
+      "table_sha256": "1ebfd9a11f75073812a5751becca09483e1f90073e8a12d7e0453e83d3c5bcb8",
+      "table_bytes": 600818829,
+      "documents": 4116,
+      "utf8_bytes": 25014995,
+      "contexts": 12543622,
+      "edges": 20491600
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00006.jsonl",
+      "table_sha256": "846a6723ea382810ff68700b646f44ef417f4cfc046ed5f1c1e1c36cf794e04f",
+      "table_bytes": 591301857,
+      "documents": 4053,
+      "utf8_bytes": 25002233,
+      "contexts": 12340780,
+      "edges": 20171469
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00007.jsonl",
+      "table_sha256": "afb4fe77980de9e2f3889e590929f42a0de39a314b46ef40de7e858dcf51024d",
+      "table_bytes": 600209666,
+      "documents": 4065,
+      "utf8_bytes": 25016940,
+      "contexts": 12543084,
+      "edges": 20448810
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00008.jsonl",
+      "table_sha256": "b76f0120e60c9b10155e2535aabf62108b55de106eef430b53124be714b2e72e",
+      "table_bytes": 602340044,
+      "documents": 4089,
+      "utf8_bytes": 25012712,
+      "contexts": 12596515,
+      "edges": 20517713
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00009.jsonl",
+      "table_sha256": "293644d597f511125cf4032f7b3d98149845905ed55cd11ff6975f2f0483874c",
+      "table_bytes": 606895848,
+      "documents": 4062,
+      "utf8_bytes": 25001392,
+      "contexts": 12687980,
+      "edges": 20662559
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00010.jsonl",
+      "table_sha256": "cb87ee2785aae34f1ecbd57e3c5421c3250cde4e380536434e9ebef78f7dca2d",
+      "table_bytes": 594315550,
+      "documents": 4158,
+      "utf8_bytes": 25002120,
+      "contexts": 12413041,
+      "edges": 20262541
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00011.jsonl",
+      "table_sha256": "66221d81a1233360c4dc592ce0c13e3134d4618d8406e196f131c9dd2ec952be",
+      "table_bytes": 593432801,
+      "documents": 4198,
+      "utf8_bytes": 25000056,
+      "contexts": 12385244,
+      "edges": 20238475
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00012.jsonl",
+      "table_sha256": "a83d9c1b47023a8121a5a9bbec52fd15191ef31af09e6103f9ffa4188d715a66",
+      "table_bytes": 589198298,
+      "documents": 4100,
+      "utf8_bytes": 25003398,
+      "contexts": 12297444,
+      "edges": 20101159
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00013.jsonl",
+      "table_sha256": "89071853090c13aee079dafec16a9ce2206c3b65830e425deddc35654f10e29d",
+      "table_bytes": 596231109,
+      "documents": 4158,
+      "utf8_bytes": 25000951,
+      "contexts": 12462248,
+      "edges": 20315079
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00014.jsonl",
+      "table_sha256": "92b71561f50e8b27b139045eb317e7c190a78abaad09c44c1c58defedc1a88c3",
+      "table_bytes": 596680555,
+      "documents": 4026,
+      "utf8_bytes": 25003964,
+      "contexts": 12465395,
+      "edges": 20333461
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00015.jsonl",
+      "table_sha256": "254c49f36740886c4e7029414b6c772c98c27ec5bd11ca62a5d786ea2bdca836",
+      "table_bytes": 594976401,
+      "documents": 4179,
+      "utf8_bytes": 25016793,
+      "contexts": 12425585,
+      "edges": 20288240
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00016.jsonl",
+      "table_sha256": "01b59fc92f952d8262e132feadd988bd97bcfc97d9b32a77901ea7c089be556a",
+      "table_bytes": 603263122,
+      "documents": 4092,
+      "utf8_bytes": 25036048,
+      "contexts": 12600684,
+      "edges": 20554358
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00017.jsonl",
+      "table_sha256": "cfa5193538933e4a4ecfc29f888e16d32fb01365d5720527527ce1541c51dc47",
+      "table_bytes": 587057184,
+      "documents": 4086,
+      "utf8_bytes": 25012481,
+      "contexts": 12248259,
+      "edges": 20031681
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00018.jsonl",
+      "table_sha256": "a0b2bcc1e30e044696a128a4f8dc1f0da121168c4fbd7f585062a9372226a8b2",
+      "table_bytes": 597912262,
+      "documents": 4155,
+      "utf8_bytes": 25020543,
+      "contexts": 12483405,
+      "edges": 20386821
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00019.jsonl",
+      "table_sha256": "e4c5c7983f99c437c39f579f284281b766f8e383d027032f7ae9edb67c30bdba",
+      "table_bytes": 596477281,
+      "documents": 4047,
+      "utf8_bytes": 25001520,
+      "contexts": 12460186,
+      "edges": 20329523
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00020.jsonl",
+      "table_sha256": "840036734652fa6a2f93137aac06d54a709319fedeeed1fea45d16e55ac562e9",
+      "table_bytes": 595987685,
+      "documents": 4155,
+      "utf8_bytes": 25007432,
+      "contexts": 12442063,
+      "edges": 20326338
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00021.jsonl",
+      "table_sha256": "17afbe9b8a3421a1864d093450aea916a4b6f542f47aa2bb3ab7fb263ed8932c",
+      "table_bytes": 600137744,
+      "documents": 4107,
+      "utf8_bytes": 25053225,
+      "contexts": 12534002,
+      "edges": 20458459
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00022.jsonl",
+      "table_sha256": "84fd108f54cecb7502e89248f2a64fa0d13ebb34395ac88b6119eb91e0729323",
+      "table_bytes": 590619677,
+      "documents": 4139,
+      "utf8_bytes": 25002288,
+      "contexts": 12328149,
+      "edges": 20147894
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00023.jsonl",
+      "table_sha256": "38e82bf5d810f95f3b812f3f18531176343805eee3c83390d94746b21fb25750",
+      "table_bytes": 602352138,
+      "documents": 4141,
+      "utf8_bytes": 25001920,
+      "contexts": 12596857,
+      "edges": 20512536
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00024.jsonl",
+      "table_sha256": "0ca6f44fd11b6dd13238917ad6ae55f7476de8b96b762a4d9a36fc29b7f5323f",
+      "table_bytes": 599970973,
+      "documents": 4026,
+      "utf8_bytes": 25008906,
+      "contexts": 12535464,
+      "edges": 20445858
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00025.jsonl",
+      "table_sha256": "ca881c0a2980b5b138fb53ea69987d907d42af665e95918dcae696b5f6927062",
+      "table_bytes": 602762640,
+      "documents": 4020,
+      "utf8_bytes": 25008990,
+      "contexts": 12601916,
+      "edges": 20532543
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00026.jsonl",
+      "table_sha256": "d9389d8689db26b19bf4ca675640b76e94e7fd1a13210c1bb61e7bfa6e7a2730",
+      "table_bytes": 595064347,
+      "documents": 4122,
+      "utf8_bytes": 25003170,
+      "contexts": 12422764,
+      "edges": 20293829
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00027.jsonl",
+      "table_sha256": "14b666dc77c832882e479be49da04570192bc58c76bd5051c5d856406cb02c56",
+      "table_bytes": 592775281,
+      "documents": 4149,
+      "utf8_bytes": 25016594,
+      "contexts": 12364623,
+      "edges": 20233127
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00028.jsonl",
+      "table_sha256": "54dfa96e7d3c6b817bc7061378dffb3d08a5c0407c843f3de5867b30967f215f",
+      "table_bytes": 607224706,
+      "documents": 4155,
+      "utf8_bytes": 25000535,
+      "contexts": 12697172,
+      "edges": 20673474
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00029.jsonl",
+      "table_sha256": "f5eaa8e04c6447b972875c0a023afca6ae2303d562965d242f95019e12ba7cb6",
+      "table_bytes": 602565239,
+      "documents": 4145,
+      "utf8_bytes": 25000127,
+      "contexts": 12586543,
+      "edges": 20537837
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00030.jsonl",
+      "table_sha256": "083bfeafbd1af0c9eb6940d2d853b67119920fc7fc883199e5765dc719c72c24",
+      "table_bytes": 599257949,
+      "documents": 4101,
+      "utf8_bytes": 25000850,
+      "contexts": 12514003,
+      "edges": 20427271
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00031.jsonl",
+      "table_sha256": "127ac55b17910636ae159b796fbf97d6b182681ec9a8ce68e51a079272c25249",
+      "table_bytes": 595981694,
+      "documents": 3999,
+      "utf8_bytes": 25001063,
+      "contexts": 12440951,
+      "edges": 20331707
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00032.jsonl",
+      "table_sha256": "2fd93e5a9e67654a4c1f7884aaa54cf6b04cfcc24ee33a517eeaa6cb595e1dee",
+      "table_bytes": 596255714,
+      "documents": 4093,
+      "utf8_bytes": 25001614,
+      "contexts": 12445245,
+      "edges": 20338485
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00033.jsonl",
+      "table_sha256": "fd616ee757a3374b7f1c4d03cc79784c4565fd7d9a29360419d357b9b5a455f7",
+      "table_bytes": 599065546,
+      "documents": 4125,
+      "utf8_bytes": 25013397,
+      "contexts": 12517342,
+      "edges": 20414968
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00034.jsonl",
+      "table_sha256": "9d0c4f41c55746b9664da436332f26a5abaa41dff9d706f60874acf2719c62aa",
+      "table_bytes": 624076692,
+      "documents": 8467,
+      "utf8_bytes": 25000134,
+      "contexts": 13066612,
+      "edges": 21213401
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00035.jsonl",
+      "table_sha256": "02ceb536c08f102d0b1a784abd8986b155178c2d22e35668e0f0c51cf14ea373",
+      "table_bytes": 650006988,
+      "documents": 13036,
+      "utf8_bytes": 25000423,
+      "contexts": 13639678,
+      "edges": 22044464
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00036.jsonl",
+      "table_sha256": "e357ecfbdb4961b9a49182aadd1b6763abea70dc1284a051ca486a08b1420032",
+      "table_bytes": 653346243,
+      "documents": 13042,
+      "utf8_bytes": 25000355,
+      "contexts": 13722066,
+      "edges": 22137712
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00037.jsonl",
+      "table_sha256": "e37cbd07258d0d07ed90e6f7a95335b11e5661f8921cfdd911387ac877b933dc",
+      "table_bytes": 646807684,
+      "documents": 13054,
+      "utf8_bytes": 25000909,
+      "contexts": 13570290,
+      "edges": 21932932
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00038.jsonl",
+      "table_sha256": "dd1094e9fbf1b50f7bfceab0d1e33d698ebfc0f4139f082794be2933b7c1b909",
+      "table_bytes": 649662714,
+      "documents": 13022,
+      "utf8_bytes": 25001278,
+      "contexts": 13631669,
+      "edges": 22029784
+    },
+    {
+      "table_path": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg1gb-20261020-01/background_blocks/block-00039.jsonl",
+      "table_sha256": "1724154633bd6a99e4c3c65db1f187cd118c85997f9265c33b926a229f57b51c",
+      "table_bytes": 647400769,
+      "documents": 12846,
+      "utf8_bytes": 24690748,
+      "contexts": 13595070,
+      "edges": 21934452
+    }
+  ],
+  "table_sha256": "9f8747d1986ee59896e9eb384fe8d97e553f9f03cdef4a95c72f01370567e4d8",
+  "table_bytes": 24207114622,
+  "block_context_rows": 505978522,
+  "protocol": "Whole documents per block; BOS plus UTF-8 IDs, no appended EOS; no pruning. Repeated contexts are summed across blocks, not distinct global context counts.",
+  "elapsed_seconds": 4604.590900741052,
+  "peak_host_rss_bytes": 5470105600
+}

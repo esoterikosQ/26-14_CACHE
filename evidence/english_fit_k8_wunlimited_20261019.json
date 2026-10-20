@@ -1,0 +1,411 @@
+{
+  "stage": "T07-T08-initial-screen",
+  "status": "validation_gate_failed",
+  "run_id": "en-patcher-20261019-01",
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "count_config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "teacher_mean_patch_length_from_training": 4.5313422072519485,
+  "selection_plan": {
+    "configurations": "Only K=8 with W=1024/unlimited; alpha=kappa=lambda=eta=1; rho=.001; no test data",
+    "thresholds": "Coarse 0,1/8,...,1; then nine equally spaced points within +/-1/8 of best, excluding duplicates",
+    "tie_break": "Highest sequential micro F1, then larger threshold",
+    "state": "Fresh counts and boundaries per chunk for every threshold; fixed feature scores are not reused",
+    "bootstrap": "Original-document resampling after threshold selection; descriptive validation interval, not an unbiased test interval"
+  },
+  "code_sha256": {
+    "/home/itcmaster/projects/blt-cache/source/scripts/fit_count_patcher.py": "af22a9c20460b328b86314c2a827b82faab2ae2b8d64a87ac82747dc191d1e97",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/count_patcher.py": "258c258d7d0d8167662558a36dae6cd0b09b6d66c3693b12f4f5de78cab70687"
+  },
+  "threshold_trials": [
+    {
+      "tp": 104640,
+      "fp": 359130,
+      "fn": 0,
+      "precision": 0.22562908338184876,
+      "recall": 1.0,
+      "f1": 0.3681849369293292,
+      "threshold": 0.0,
+      "elapsed_seconds": 29.54921722318977
+    },
+    {
+      "tp": 97854,
+      "fp": 128402,
+      "fn": 6786,
+      "precision": 0.43249239799165545,
+      "recall": 0.9351490825688074,
+      "f1": 0.591448672694744,
+      "threshold": 0.125,
+      "elapsed_seconds": 29.57849084911868
+    },
+    {
+      "tp": 83062,
+      "fp": 77754,
+      "fn": 21578,
+      "precision": 0.5165033330016914,
+      "recall": 0.7937882262996941,
+      "f1": 0.6258061599662468,
+      "threshold": 0.25,
+      "elapsed_seconds": 29.740027942694724
+    },
+    {
+      "tp": 67300,
+      "fp": 50565,
+      "fn": 37340,
+      "precision": 0.5709922368811776,
+      "recall": 0.6431574923547401,
+      "f1": 0.6049302262870497,
+      "threshold": 0.375,
+      "elapsed_seconds": 29.76812449283898
+    },
+    {
+      "tp": 52823,
+      "fp": 25920,
+      "fn": 51817,
+      "precision": 0.6708278831134196,
+      "recall": 0.5048069571865443,
+      "f1": 0.5760948397615918,
+      "threshold": 0.5,
+      "elapsed_seconds": 29.87806748272851
+    },
+    {
+      "tp": 38594,
+      "fp": 10243,
+      "fn": 66046,
+      "precision": 0.7902614820730184,
+      "recall": 0.3688264525993884,
+      "f1": 0.5029287776018556,
+      "threshold": 0.625,
+      "elapsed_seconds": 29.72324674669653
+    },
+    {
+      "tp": 24206,
+      "fp": 3621,
+      "fn": 80434,
+      "precision": 0.8698745822402703,
+      "recall": 0.2313264525993884,
+      "f1": 0.3654646062792998,
+      "threshold": 0.75,
+      "elapsed_seconds": 29.919657106045634
+    },
+    {
+      "tp": 10664,
+      "fp": 1173,
+      "fn": 93976,
+      "precision": 0.9009039452563994,
+      "recall": 0.10191131498470948,
+      "f1": 0.18310911167011512,
+      "threshold": 0.875,
+      "elapsed_seconds": 30.08511047391221
+    },
+    {
+      "tp": 0,
+      "fp": 0,
+      "fn": 104640,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "threshold": 1.0,
+      "elapsed_seconds": 29.653507138602436
+    },
+    {
+      "tp": 94225,
+      "fp": 109839,
+      "fn": 10415,
+      "precision": 0.4617423945428885,
+      "recall": 0.9004682721712538,
+      "f1": 0.6104553228983104,
+      "threshold": 0.15625,
+      "elapsed_seconds": 29.771695349831134
+    },
+    {
+      "tp": 90441,
+      "fp": 96040,
+      "fn": 14199,
+      "precision": 0.48498774674095485,
+      "recall": 0.8643061926605504,
+      "f1": 0.6213292754559101,
+      "threshold": 0.1875,
+      "elapsed_seconds": 29.64179557794705
+    },
+    {
+      "tp": 86759,
+      "fp": 85912,
+      "fn": 17881,
+      "precision": 0.5024526411499325,
+      "recall": 0.8291188837920489,
+      "f1": 0.6257162535925369,
+      "threshold": 0.21875,
+      "elapsed_seconds": 29.608152792789042
+    },
+    {
+      "tp": 79321,
+      "fp": 70525,
+      "fn": 25319,
+      "precision": 0.5293501328030111,
+      "recall": 0.7580370795107033,
+      "f1": 0.6233820328033762,
+      "threshold": 0.28125,
+      "elapsed_seconds": 29.548594290856272
+    },
+    {
+      "tp": 75390,
+      "fp": 63898,
+      "fn": 29250,
+      "precision": 0.5412526563666648,
+      "recall": 0.7204701834862385,
+      "f1": 0.6181332196385819,
+      "threshold": 0.3125,
+      "elapsed_seconds": 29.40828036982566
+    },
+    {
+      "tp": 71301,
+      "fp": 57359,
+      "fn": 33339,
+      "precision": 0.5541815638115964,
+      "recall": 0.6813933486238533,
+      "f1": 0.6112387483926275,
+      "threshold": 0.34375,
+      "elapsed_seconds": 29.43523553200066
+    }
+  ],
+  "background_load_seconds": 18.169670645147562,
+  "background_sha256": "19143f0c65747390f487139898dddfa49600c27c98912f649519ffd3bf310ce3",
+  "feature_seconds": 233.1588334417902,
+  "fit": {
+    "coefficients": [
+      -4.529606663836901,
+      0.019312930462297765,
+      0.0,
+      1.877391037323869,
+      0.010339553030582984
+    ],
+    "rho": 0.001,
+    "loss": 0.35550851313773607,
+    "iterations": 13,
+    "evaluations": 15,
+    "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "feature_scale": [
+      1.0,
+      6.216751139212366,
+      169.74619372441887,
+      1.6494075998373625,
+      3.868221269945194
+    ],
+    "gradient": [
+      -9.564362937839604e-08,
+      -4.154035903253665e-07,
+      1.278740884414144,
+      -2.086387920190863e-07,
+      2.2821839102413546e-07
+    ],
+    "scaled_projected_gradient_max": 1.2649316763161443e-07
+  },
+  "fit_seconds": 1.2453519818373024,
+  "training_positions": 4041644,
+  "feature_artifacts": {
+    "train_features.npy": "7c6c556f16a2d4706c069e9d2dc234b03fa771248503c62c6c1fd577e5bd1c50",
+    "train_labels.npy": "0adde7a8331af3f62ebb29f2107cb03656d173f0b5f0208d4235218d68eba47f"
+  },
+  "training_logit_contributions": {
+    "mean": [
+      -4.529606663836901,
+      0.08730884383475518,
+      0.0,
+      2.5686160546683268,
+      -0.03314608287865561
+    ],
+    "min": [
+      -4.529606663836901,
+      0.019312930462297765,
+      0.0,
+      0.0036668487605178743,
+      -0.08271642424466387
+    ],
+    "max": [
+      -4.529606663836901,
+      2.974191291193856,
+      0.0,
+      7.502275934701268,
+      0.0
+    ]
+  },
+  "teacher_history_diagnostic": {
+    "tp": 83286,
+    "fp": 78976,
+    "fn": 21354,
+    "precision": 0.513280990003821,
+    "recall": 0.7959288990825688,
+    "f1": 0.6240942368359922
+  },
+  "prefix_diagnostics": [
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 64,
+      "full_entropy": 0.021728515625,
+      "prefix_entropy": 0.021728515625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 1.296752015695334,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.000202178955078125,
+      "prefix_entropy": 0.00021266937255859375,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.006101774354684521,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.16796875,
+      "prefix_entropy": 0.1669921875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 2.128043175758932,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 684,
+      "full_entropy": 0.9375,
+      "prefix_entropy": 0.9375,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.8620424904468389,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 64,
+      "full_entropy": 1.0625,
+      "prefix_entropy": 1.0546875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 3.253022763735053,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.56640625,
+      "prefix_entropy": 0.56640625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 1.7746055711481263,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.0003604888916015625,
+      "prefix_entropy": 0.00035858154296875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.5932863969674105,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 928,
+      "full_entropy": 1.5078125,
+      "prefix_entropy": 1.5078125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 1.4267352416761856,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 64,
+      "full_entropy": 2.046875,
+      "prefix_entropy": 2.03125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 1.6678193702282376,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 128,
+      "full_entropy": 2.953125,
+      "prefix_entropy": 2.953125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 3.548974587245798,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.73046875,
+      "prefix_entropy": 0.73046875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 1.453002047924575,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 1012,
+      "full_entropy": 0.84765625,
+      "prefix_entropy": 0.84765625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.9163481964213595,
+      "candidate_label": false
+    }
+  ],
+  "selected_rule": {
+    "coefficients": [
+      -4.529606663836901,
+      0.019312930462297765,
+      0.0,
+      1.877391037323869,
+      0.010339553030582984
+    ],
+    "mean_patch_length": 4.5313422072519485,
+    "threshold": 0.25
+  },
+  "validation": {
+    "tp": 83062,
+    "fp": 77754,
+    "fn": 21578,
+    "precision": 0.5165033330016914,
+    "recall": 0.7937882262996941,
+    "f1": 0.6258061599662468,
+    "threshold": 0.25,
+    "elapsed_seconds": 30.09391532326117,
+    "entropy_mae": 0.7524936310116634,
+    "entropy_rmse": 1.0022703488364895,
+    "entropy_spearman": 0.647816865282723,
+    "log_loss": 0.35068070843329735,
+    "auprc_average_precision": 0.6811512637347724,
+    "candidate_patch_count": 161396,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 2.877084933951275,
+    "teacher_mean_patch_length": 4.41313438509789,
+    "mean_absolute_chunk_patch_count_error": 193.8896551724138,
+    "document_bootstrap_f1_95ci": [
+      0.6176820028734253,
+      0.632704390974806
+    ],
+    "documents": 111
+  },
+  "remaining": "No ablations, full-BLT BPB/timing, or heldout evaluation performed",
+  "elapsed_seconds": 756.1270463368855,
+  "peak_host_rss_bytes": 3278508032
+}

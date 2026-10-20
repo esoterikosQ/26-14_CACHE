@@ -1,0 +1,1089 @@
+{
+  "stage": "T07-T08-initial-screen",
+  "status": "validation_gate_failed",
+  "run_id": "en-patcher-20261019-01",
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "count_config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "background_report_sha256": "c8a68894f60f9950eb9c1ee196584122f1ac0f46db4c464e68697aa731662987",
+  "label_report_sha256": "0f79afdb7a1f7957fac83d1dd517d9beec1e5dd0abb6d82264191d4fb0fea201",
+  "wall_clock_limit_seconds": null,
+  "teacher_mean_patch_length_from_training": 4.5313422072519485,
+  "selection_plan": {
+    "configurations": "Only K=8 with W=1024/unlimited; alpha=kappa=lambda=eta=1; rho=.001; no test data",
+    "thresholds": "Coarse 0,1/8,...,1; then nine equally spaced points within +/-1/8 of best, excluding duplicates",
+    "tie_break": "Highest sequential micro F1, then larger threshold",
+    "state": "Fresh counts and boundaries per chunk for every threshold; fixed feature scores are not reused",
+    "bootstrap": "Original-document resampling after threshold selection; descriptive validation interval, not an unbiased test interval"
+  },
+  "code_sha256": {
+    "/home/itcmaster/projects/blt-cache/source/scripts/fit_count_patcher.py": "aad6bc5cd111b7b71de3bcf3e85843d2398d3ca74e2a76c04b4ff5a4096dff49",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/count_patcher.py": "258c258d7d0d8167662558a36dae6cd0b09b6d66c3693b12f4f5de78cab70687"
+  },
+  "threshold_trials": [
+    {
+      "tp": 104640,
+      "fp": 359130,
+      "fn": 0,
+      "precision": 0.22562908338184876,
+      "recall": 1.0,
+      "f1": 0.3681849369293292,
+      "threshold": 0.0,
+      "elapsed_seconds": 38.0876184203662
+    },
+    {
+      "tp": 99443,
+      "fp": 85116,
+      "fn": 5197,
+      "precision": 0.5388141461538045,
+      "recall": 0.9503344801223241,
+      "f1": 0.6877133046794768,
+      "threshold": 0.125,
+      "elapsed_seconds": 38.322448993101716
+    },
+    {
+      "tp": 91081,
+      "fp": 45125,
+      "fn": 13559,
+      "precision": 0.6687003509390188,
+      "recall": 0.8704224006116208,
+      "f1": 0.7563422269832175,
+      "threshold": 0.25,
+      "elapsed_seconds": 38.38695848779753
+    },
+    {
+      "tp": 82324,
+      "fp": 28903,
+      "fn": 22316,
+      "precision": 0.7401440297769426,
+      "recall": 0.7867354740061162,
+      "f1": 0.7627289025186805,
+      "threshold": 0.375,
+      "elapsed_seconds": 38.28184681199491
+    },
+    {
+      "tp": 74053,
+      "fp": 19872,
+      "fn": 30587,
+      "precision": 0.788426936385414,
+      "recall": 0.7076930428134557,
+      "f1": 0.7458817012061542,
+      "threshold": 0.5,
+      "elapsed_seconds": 38.4334633173421
+    },
+    {
+      "tp": 64737,
+      "fp": 12944,
+      "fn": 39903,
+      "precision": 0.8333698072887836,
+      "recall": 0.6186639908256881,
+      "f1": 0.7101430992589992,
+      "threshold": 0.625,
+      "elapsed_seconds": 38.66844197316095
+    },
+    {
+      "tp": 51111,
+      "fp": 6867,
+      "fn": 53529,
+      "precision": 0.8815585221980752,
+      "recall": 0.4884461009174312,
+      "f1": 0.6286019997786223,
+      "threshold": 0.75,
+      "elapsed_seconds": 38.359207628294826
+    },
+    {
+      "tp": 25197,
+      "fp": 2202,
+      "fn": 79443,
+      "precision": 0.9196321033614365,
+      "recall": 0.24079701834862385,
+      "f1": 0.3816599641015155,
+      "threshold": 0.875,
+      "elapsed_seconds": 38.256185735575855
+    },
+    {
+      "tp": 0,
+      "fp": 0,
+      "fn": 104640,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "threshold": 1.0,
+      "elapsed_seconds": 38.55277771688998
+    },
+    {
+      "tp": 88797,
+      "fp": 39793,
+      "fn": 15843,
+      "precision": 0.6905435881483786,
+      "recall": 0.8485951834862385,
+      "f1": 0.7614543583587017,
+      "threshold": 0.28125,
+      "elapsed_seconds": 38.48069095565006
+    },
+    {
+      "tp": 86599,
+      "fp": 35487,
+      "fn": 18041,
+      "precision": 0.7093278508592303,
+      "recall": 0.8275898318042814,
+      "f1": 0.763908859151575,
+      "threshold": 0.3125,
+      "elapsed_seconds": 38.39998543681577
+    },
+    {
+      "tp": 84399,
+      "fp": 31876,
+      "fn": 20241,
+      "precision": 0.7258568049881746,
+      "recall": 0.806565366972477,
+      "f1": 0.7640857343322092,
+      "threshold": 0.34375,
+      "elapsed_seconds": 38.43026091204956
+    },
+    {
+      "tp": 80163,
+      "fp": 26289,
+      "fn": 24477,
+      "precision": 0.7530436252959081,
+      "recall": 0.7660837155963303,
+      "f1": 0.7595077028025695,
+      "threshold": 0.40625,
+      "elapsed_seconds": 38.292729161679745
+    },
+    {
+      "tp": 78087,
+      "fp": 23965,
+      "fn": 26553,
+      "precision": 0.7651687375063693,
+      "recall": 0.7462442660550459,
+      "f1": 0.7555880246937472,
+      "threshold": 0.4375,
+      "elapsed_seconds": 38.36439718492329
+    },
+    {
+      "tp": 76012,
+      "fp": 21826,
+      "fn": 28628,
+      "precision": 0.7769169443365563,
+      "recall": 0.7264143730886851,
+      "f1": 0.7508173727516075,
+      "threshold": 0.46875,
+      "elapsed_seconds": 38.3660705271177
+    }
+  ],
+  "background_loading": {
+    "storage": "document_blocks_v1",
+    "required_contexts": 4055232,
+    "scope": "Exact row sums for every prefix of fixed train/validation inputs, including virtual slots; all counts preserved in disk blocks; not a timing benchmark or general-purpose loaded model"
+  },
+  "background_load_seconds": 571.2707430771552,
+  "background_sha256": "9f8747d1986ee59896e9eb384fe8d97e553f9f03cdef4a95c72f01370567e4d8",
+  "feature_seconds": 316.2719398722984,
+  "fit": {
+    "coefficients": [
+      -4.445996598980672,
+      0.0,
+      0.0,
+      2.3950389631265634,
+      0.1771112057139943
+    ],
+    "rho": 0.001,
+    "loss": 0.2629052584658777,
+    "iterations": 13,
+    "evaluations": 14,
+    "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+    "feature_scale": [
+      1.0,
+      6.216751139212366,
+      169.74619372441887,
+      1.4935301569099142,
+      3.868221269945194
+    ],
+    "gradient": [
+      -2.4721159095492107e-09,
+      0.050811466350804455,
+      0.7405936077142891,
+      -7.354929318793141e-09,
+      1.342715458203846e-08
+    ],
+    "scaled_projected_gradient_max": 4.924526823087624e-09
+  },
+  "fit_seconds": 1.0616390770301223,
+  "training_positions": 4041644,
+  "feature_artifacts": {
+    "train_features.npy": "6d9c4ac6714d496002ddc692d6a0a7a751bcbd13b25fe9ef344aae9ee6f69aa6",
+    "train_labels.npy": "0adde7a8331af3f62ebb29f2107cb03656d173f0b5f0208d4235218d68eba47f"
+  },
+  "training_logit_contributions": {
+    "mean": [
+      -4.445996598980672,
+      0.0,
+      0.0,
+      2.70861405484273,
+      -0.567775288348579
+    ],
+    "min": [
+      -4.445996598980672,
+      0.0,
+      0.0,
+      0.00014845866265175733,
+      -1.4168896457119544
+    ],
+    "max": [
+      -4.445996598980672,
+      0.0,
+      0.0,
+      10.345661942304014,
+      0.0
+    ]
+  },
+  "validation_document_counts": [
+    [
+      108,
+      37,
+      20
+    ],
+    [
+      136,
+      84,
+      16
+    ],
+    [
+      226,
+      90,
+      60
+    ],
+    [
+      150,
+      68,
+      25
+    ],
+    [
+      144,
+      39,
+      40
+    ],
+    [
+      149,
+      66,
+      26
+    ],
+    [
+      160,
+      74,
+      32
+    ],
+    [
+      116,
+      58,
+      20
+    ],
+    [
+      102,
+      54,
+      20
+    ],
+    [
+      173,
+      70,
+      41
+    ],
+    [
+      109,
+      61,
+      34
+    ],
+    [
+      178,
+      65,
+      37
+    ],
+    [
+      85,
+      42,
+      17
+    ],
+    [
+      134,
+      41,
+      42
+    ],
+    [
+      103,
+      24,
+      35
+    ],
+    [
+      142,
+      50,
+      30
+    ],
+    [
+      104,
+      25,
+      22
+    ],
+    [
+      141,
+      49,
+      21
+    ],
+    [
+      162,
+      54,
+      26
+    ],
+    [
+      165,
+      40,
+      17
+    ],
+    [
+      96,
+      21,
+      22
+    ],
+    [
+      106,
+      64,
+      11
+    ],
+    [
+      157,
+      64,
+      39
+    ],
+    [
+      121,
+      75,
+      22
+    ],
+    [
+      109,
+      67,
+      38
+    ],
+    [
+      94,
+      29,
+      30
+    ],
+    [
+      93,
+      43,
+      19
+    ],
+    [
+      109,
+      28,
+      13
+    ],
+    [
+      169,
+      49,
+      73
+    ],
+    [
+      82,
+      26,
+      30
+    ],
+    [
+      180,
+      75,
+      37
+    ],
+    [
+      94,
+      47,
+      21
+    ],
+    [
+      111,
+      38,
+      38
+    ],
+    [
+      100,
+      55,
+      20
+    ],
+    [
+      121,
+      46,
+      18
+    ],
+    [
+      94,
+      15,
+      33
+    ],
+    [
+      98,
+      35,
+      19
+    ],
+    [
+      106,
+      37,
+      12
+    ],
+    [
+      163,
+      67,
+      21
+    ],
+    [
+      88,
+      47,
+      25
+    ],
+    [
+      221,
+      122,
+      52
+    ],
+    [
+      134,
+      52,
+      35
+    ],
+    [
+      105,
+      30,
+      24
+    ],
+    [
+      134,
+      62,
+      20
+    ],
+    [
+      988,
+      387,
+      235
+    ],
+    [
+      582,
+      237,
+      112
+    ],
+    [
+      289,
+      118,
+      90
+    ],
+    [
+      401,
+      147,
+      72
+    ],
+    [
+      1185,
+      699,
+      209
+    ],
+    [
+      232,
+      119,
+      30
+    ],
+    [
+      512,
+      239,
+      102
+    ],
+    [
+      257,
+      121,
+      37
+    ],
+    [
+      508,
+      163,
+      116
+    ],
+    [
+      1202,
+      460,
+      196
+    ],
+    [
+      699,
+      262,
+      175
+    ],
+    [
+      210,
+      107,
+      30
+    ],
+    [
+      293,
+      132,
+      85
+    ],
+    [
+      324,
+      135,
+      95
+    ],
+    [
+      768,
+      328,
+      141
+    ],
+    [
+      586,
+      195,
+      110
+    ],
+    [
+      341,
+      199,
+      53
+    ],
+    [
+      257,
+      116,
+      57
+    ],
+    [
+      211,
+      100,
+      27
+    ],
+    [
+      758,
+      258,
+      152
+    ],
+    [
+      214,
+      81,
+      62
+    ],
+    [
+      508,
+      129,
+      142
+    ],
+    [
+      471,
+      112,
+      111
+    ],
+    [
+      502,
+      211,
+      92
+    ],
+    [
+      1027,
+      429,
+      248
+    ],
+    [
+      1299,
+      164,
+      652
+    ],
+    [
+      305,
+      129,
+      98
+    ],
+    [
+      272,
+      119,
+      54
+    ],
+    [
+      1160,
+      530,
+      222
+    ],
+    [
+      239,
+      103,
+      39
+    ],
+    [
+      245,
+      110,
+      51
+    ],
+    [
+      240,
+      179,
+      54
+    ],
+    [
+      372,
+      137,
+      149
+    ],
+    [
+      310,
+      150,
+      55
+    ],
+    [
+      648,
+      263,
+      134
+    ],
+    [
+      229,
+      73,
+      72
+    ],
+    [
+      505,
+      294,
+      110
+    ],
+    [
+      842,
+      275,
+      253
+    ],
+    [
+      177,
+      70,
+      44
+    ],
+    [
+      546,
+      229,
+      104
+    ],
+    [
+      451,
+      169,
+      75
+    ],
+    [
+      344,
+      97,
+      78
+    ],
+    [
+      258,
+      110,
+      71
+    ],
+    [
+      423,
+      184,
+      98
+    ],
+    [
+      1914,
+      790,
+      393
+    ],
+    [
+      3485,
+      1122,
+      858
+    ],
+    [
+      1737,
+      1036,
+      354
+    ],
+    [
+      2293,
+      1093,
+      363
+    ],
+    [
+      1815,
+      703,
+      480
+    ],
+    [
+      1965,
+      609,
+      620
+    ],
+    [
+      1905,
+      463,
+      782
+    ],
+    [
+      8178,
+      2360,
+      2109
+    ],
+    [
+      1976,
+      488,
+      710
+    ],
+    [
+      1707,
+      775,
+      325
+    ],
+    [
+      2061,
+      1174,
+      599
+    ],
+    [
+      1442,
+      618,
+      296
+    ],
+    [
+      2071,
+      396,
+      630
+    ],
+    [
+      1721,
+      596,
+      320
+    ],
+    [
+      2406,
+      927,
+      494
+    ],
+    [
+      1528,
+      1016,
+      305
+    ],
+    [
+      1549,
+      645,
+      286
+    ],
+    [
+      2391,
+      550,
+      822
+    ],
+    [
+      2914,
+      1069,
+      649
+    ],
+    [
+      2225,
+      821,
+      435
+    ],
+    [
+      1974,
+      820,
+      411
+    ],
+    [
+      5623,
+      2006,
+      1205
+    ],
+    [
+      1657,
+      645,
+      350
+    ]
+  ],
+  "teacher_history_diagnostic": {
+    "tp": 84399,
+    "fp": 31876,
+    "fn": 20241,
+    "precision": 0.7258568049881746,
+    "recall": 0.806565366972477,
+    "f1": 0.7640857343322092
+  },
+  "prefix_diagnostics": [
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 64,
+      "full_entropy": 0.021728515625,
+      "prefix_entropy": 0.021728515625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 1.1546435287900667,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.000202178955078125,
+      "prefix_entropy": 0.00021266937255859375,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.00036098698725252435,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.16796875,
+      "prefix_entropy": 0.1669921875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 1.1868977012477302,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "prefix_input_ids": 684,
+      "full_entropy": 0.9375,
+      "prefix_entropy": 0.9375,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.8665801826838796,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 64,
+      "full_entropy": 1.0625,
+      "prefix_entropy": 1.0546875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 3.535158343976217,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 128,
+      "full_entropy": 0.56640625,
+      "prefix_entropy": 0.56640625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.8740118889254442,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.0003604888916015625,
+      "prefix_entropy": 0.00035858154296875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.02191987697945861,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "prefix_input_ids": 928,
+      "full_entropy": 1.5078125,
+      "prefix_entropy": 1.5078125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 1.5645863936953768,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 64,
+      "full_entropy": 2.046875,
+      "prefix_entropy": 2.03125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 2.4337785410239525,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 128,
+      "full_entropy": 2.953125,
+      "prefix_entropy": 2.953125,
+      "full_label": true,
+      "prefix_label": true,
+      "candidate_entropy": 3.573055599472207,
+      "candidate_label": true
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 256,
+      "full_entropy": 0.73046875,
+      "prefix_entropy": 0.73046875,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.9986401151835094,
+      "candidate_label": false
+    },
+    {
+      "document_id": "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "prefix_input_ids": 1012,
+      "full_entropy": 0.84765625,
+      "prefix_entropy": 0.84765625,
+      "full_label": false,
+      "prefix_label": false,
+      "candidate_entropy": 0.8476300961515963,
+      "candidate_label": false
+    }
+  ],
+  "selected_rule": {
+    "coefficients": [
+      -4.445996598980672,
+      0.0,
+      0.0,
+      2.3950389631265634,
+      0.1771112057139943
+    ],
+    "mean_patch_length": 4.5313422072519485,
+    "threshold": 0.34375
+  },
+  "validation": {
+    "tp": 84399,
+    "fp": 31876,
+    "fn": 20241,
+    "precision": 0.7258568049881746,
+    "recall": 0.806565366972477,
+    "f1": 0.7640857343322092,
+    "threshold": 0.34375,
+    "elapsed_seconds": 38.66715043783188,
+    "entropy_mae": 0.48747500098597846,
+    "entropy_rmse": 0.7099911150896755,
+    "entropy_spearman": 0.8164986868352786,
+    "log_loss": 0.2529020857246733,
+    "auprc_average_precision": 0.8224225831386864,
+    "candidate_patch_count": 116855,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 3.973728124598862,
+    "teacher_mean_patch_length": 4.41313438509789,
+    "mean_absolute_chunk_patch_count_error": 53.789655172413795,
+    "document_ids": [
+      "<urn:uuid:acda4b2e-8c46-41d8-8fbe-14abaf1f2821>",
+      "<urn:uuid:78fab3c8-5a74-462b-9678-bebc4ddf8931>",
+      "<urn:uuid:d33d5a0e-cfdb-40d5-a084-b22e3f3dab0e>",
+      "<urn:uuid:d3ab078f-6d2a-418f-b3d0-d1ccf8918ac2>",
+      "<urn:uuid:c366e4b3-5842-4e6e-b169-0b104d2e79c7>",
+      "<urn:uuid:439ebd3d-f738-43fd-8669-156de00377d9>",
+      "<urn:uuid:22eb054e-47d9-4ac8-b870-d0736a4404fd>",
+      "<urn:uuid:d0ee8f29-2b3b-42e6-b309-e3693272eaee>",
+      "<urn:uuid:0188a644-9b2d-4fa6-946c-186ab4dfd4c0>",
+      "<urn:uuid:ba620f5b-b236-4936-a27c-5eafbcc5bd73>",
+      "<urn:uuid:613fb71c-d260-4f15-a551-ac17166b396e>",
+      "<urn:uuid:939a35fd-49cf-4d5f-9b3a-3b5063e4189e>",
+      "<urn:uuid:fbe2f56e-5ccb-4a76-83c1-946138178344>",
+      "<urn:uuid:45a7d093-2584-4970-9322-08f11b741447>",
+      "<urn:uuid:bb8bc2ea-ac31-4069-b3fc-d197eadb970c>",
+      "<urn:uuid:1792c5c2-4f45-4d76-8569-9d8a1f7bce9d>",
+      "<urn:uuid:cadb4353-ee0e-4fc7-98cf-0edf44028555>",
+      "<urn:uuid:ad80063f-e36b-4fdb-bfae-f8eee730bf53>",
+      "<urn:uuid:ab56a84c-75c9-473c-8a0f-4a7d34a03234>",
+      "<urn:uuid:b4deea8f-61b0-4c55-a609-228c092607d2>",
+      "<urn:uuid:e311159a-bd28-4a47-b5fa-b718918a41cd>",
+      "<urn:uuid:68528092-8b1c-4146-8ce3-516ff70c71eb>",
+      "<urn:uuid:920161f4-6d7b-461c-bef7-29e79529637d>",
+      "<urn:uuid:ac968ef4-f0a2-41f0-9fd0-7d69563a8795>",
+      "<urn:uuid:9ef19427-7f00-45fa-aced-653f858bb946>",
+      "<urn:uuid:4a790230-372d-4779-bb08-7ee833048379>",
+      "<urn:uuid:9240676b-1b81-41a2-8c69-2ae978ec79db>",
+      "<urn:uuid:2bf36912-9f91-4ffd-ae44-611409cbde44>",
+      "<urn:uuid:7ebff6e6-7903-4fe8-93fa-c91acb0dbd89>",
+      "<urn:uuid:889e33a6-33b5-4fde-82e1-94b175e6f09e>",
+      "<urn:uuid:4eef1bbd-2655-4a44-874f-aca0224dfbaf>",
+      "<urn:uuid:341058c8-ccb1-4687-88e1-50c322d11477>",
+      "<urn:uuid:7a1bbb3c-8087-4d9c-be56-b8ccce1dd249>",
+      "<urn:uuid:7494fc9c-c3b6-4f7c-b534-9cb16ce850f3>",
+      "<urn:uuid:ba172524-5e1a-4ac1-9697-578a6ae6ad69>",
+      "<urn:uuid:fc27de57-57f7-49a3-8d67-34f79372a4ea>",
+      "<urn:uuid:2accd4ef-b4a5-46e6-90fb-7b512b1d5dcd>",
+      "<urn:uuid:06973cf3-2896-4bd0-8007-5372636479ed>",
+      "<urn:uuid:91c5335e-a37a-4a61-a8d8-87e1ff44ad94>",
+      "<urn:uuid:2d935349-bace-4b78-997f-999eb14e6ee1>",
+      "<urn:uuid:d5f543d8-6375-4cf3-8acc-de79c028748d>",
+      "<urn:uuid:20211c97-eeee-447b-a296-42acc8fa1a02>",
+      "<urn:uuid:2c1b002c-dbc1-4a66-8550-e110334dda29>",
+      "<urn:uuid:e6132331-05c2-4577-b4f0-f09323aeee82>",
+      "<urn:uuid:d570f4d7-9872-4aae-808c-bd958b98a98c>",
+      "<urn:uuid:180d0d6e-8a8a-4567-a9b4-65607a2933e1>",
+      "<urn:uuid:09df39f4-af93-4f96-8c3a-47e4ff0b5f48>",
+      "<urn:uuid:e5e36a84-9488-474f-80d0-ad823c2a1c65>",
+      "<urn:uuid:049197b8-9ac4-44f6-b1a5-d65c922e3de3>",
+      "<urn:uuid:50585910-2b20-45c6-bfa3-0d845123f93a>",
+      "<urn:uuid:606824d1-065e-412f-a9fe-270aeac6f226>",
+      "<urn:uuid:88de6235-fe13-4182-bcb9-84758742ade1>",
+      "<urn:uuid:622bada5-8a9c-460b-abce-b3ee5ba0ee0e>",
+      "<urn:uuid:ad22a0b2-225c-49f3-9368-ba69254407e3>",
+      "<urn:uuid:bb67ecf8-79fc-454d-baef-2d80f9da59a6>",
+      "<urn:uuid:61947a03-d6f1-4de8-b18d-f56fd9f88f7b>",
+      "<urn:uuid:e4526877-3dc7-4638-8999-9623eef52530>",
+      "<urn:uuid:14aebfd7-a5d4-421f-adc2-e7bfd617d08e>",
+      "<urn:uuid:7a0c76eb-b8a7-445e-8cd0-79068082fab9>",
+      "<urn:uuid:44d3ace6-df43-44f3-a929-8cf00e336368>",
+      "<urn:uuid:4e0be7fa-6b26-49c4-83da-0ee2afd66187>",
+      "<urn:uuid:f8dfc676-9a4f-4e63-8bb5-a0d06f8d3fd4>",
+      "<urn:uuid:e43acee4-b9d1-44eb-bb82-af138ee16249>",
+      "<urn:uuid:70766206-58c0-4fc8-8069-90ff9f6874ae>",
+      "<urn:uuid:e76a2a93-a563-4505-ad29-be587eae498e>",
+      "<urn:uuid:47b29a18-2f23-4587-9259-0cb83dfc8d12>",
+      "<urn:uuid:0f72c838-4ebf-4e8e-913d-79cc7c04e407>",
+      "<urn:uuid:ad0fee29-a79f-4cea-98b4-ba1f7ddfac28>",
+      "<urn:uuid:5503dbfe-cd46-406e-9917-9f8f71a9a45c>",
+      "<urn:uuid:e80221c1-778f-4c15-8871-5aaa03d24081>",
+      "<urn:uuid:dfb906c2-416e-4731-a5b9-41c7424e4220>",
+      "<urn:uuid:e2b5535a-a563-4242-8aa0-9bbff7cfb00d>",
+      "<urn:uuid:63cd4116-cdd9-41b0-a213-47642e71be42>",
+      "<urn:uuid:f246b38b-f9c0-43c8-a270-772f92058f83>",
+      "<urn:uuid:8ad67dc6-e304-4985-a818-abbd1ce3fbbf>",
+      "<urn:uuid:d2c8375f-6560-4f7e-9e9f-63dbfda7541b>",
+      "<urn:uuid:f7e35cee-def1-4d31-bc9c-41685c1c7eaa>",
+      "<urn:uuid:f4877d7e-0eab-4ce5-abdf-17a8b3724ddc>",
+      "<urn:uuid:dc6c5f21-b16c-4251-b524-ddd3e0aa3e09>",
+      "<urn:uuid:92e01b95-1ea5-464a-8dda-4a45e46be6a1>",
+      "<urn:uuid:a134b8dc-612f-4ec2-8922-267bf1865382>",
+      "<urn:uuid:046bc9e2-ad49-4132-8216-883160ad736a>",
+      "<urn:uuid:1051b1f4-3f17-4a8d-9c14-321fd05f06da>",
+      "<urn:uuid:bb86dfde-1f81-4742-b000-a76308fbc0f7>",
+      "<urn:uuid:c353dcac-b7ff-4828-b3c3-3cc2101ce602>",
+      "<urn:uuid:d140bebc-5b77-4a86-80bf-e23ec4e2d1b3>",
+      "<urn:uuid:1b59da79-d37e-4110-a3b5-2c952fb3dfd7>",
+      "<urn:uuid:31b73f52-a82d-4ab0-b659-e6cfca7d7700>",
+      "<urn:uuid:eab0ed61-4c26-4f63-b067-7bbe99fc0d09>",
+      "<urn:uuid:ae9e1607-b9a4-40e9-8cc2-c5421d7834ab>",
+      "<urn:uuid:10bffffe-58a8-43ff-bb99-8538ce26897d>",
+      "<urn:uuid:b1a7f96f-ed0f-491b-a00d-207f38410165>",
+      "<urn:uuid:665e0682-39c5-42d1-98b2-7577e3e3e463>",
+      "<urn:uuid:61abf3c0-d60d-4c9a-825f-34298664d4a2>",
+      "<urn:uuid:989bfd24-341d-49e3-a692-938ff8d8bca6>",
+      "<urn:uuid:1a61cabc-7211-4233-b174-75dfc0f9a093>",
+      "<urn:uuid:b406596e-0c09-4ec3-a1be-98ff4684eb2b>",
+      "<urn:uuid:23a3d67c-6c83-43c7-a994-134b888d7375>",
+      "<urn:uuid:ac7f5bfd-c61a-4693-980f-4dabb910e131>",
+      "<urn:uuid:30fa3721-8d06-4dc0-9716-bb92e08007f4>",
+      "<urn:uuid:104434cc-6b61-4298-b08f-a5a216cae6c2>",
+      "<urn:uuid:20b81405-715d-4e71-a58b-b782c7a7c4bf>",
+      "<urn:uuid:6738563a-b21b-47f7-b14d-fdbdcf61e4ad>",
+      "<urn:uuid:0bb9928d-fba0-49a2-84e7-1d7bc72d19c5>",
+      "<urn:uuid:89b55f3f-7138-40e9-a2b5-751e9641d3d2>",
+      "<urn:uuid:d2647ef4-4d05-4a16-9d01-c5a40757e637>",
+      "<urn:uuid:8ce3a74e-c092-4545-a23b-1e4e99a1a83d>",
+      "<urn:uuid:5f49976a-327e-43ae-bcf3-3feb0bc8a2ad>",
+      "<urn:uuid:28072cfb-2ba7-4702-9aa8-f107271dfe5d>",
+      "<urn:uuid:634abb49-58f2-4512-b262-6fdf869affb9>",
+      "<urn:uuid:4f95d5a8-8a80-47f8-b60f-964531471672>"
+    ],
+    "document_bootstrap_f1_95ci": [
+      0.7557184454370988,
+      0.7704818853468457
+    ],
+    "documents": 111
+  },
+  "remaining": "No ablations, full-BLT BPB/timing, or heldout evaluation performed",
+  "elapsed_seconds": 1539.4832030422986,
+  "peak_host_rss_bytes": 2905587712
+}

@@ -1,0 +1,18 @@
+{
+  "run_id": "en-patcher-bg5gb-20261020-01",
+  "baseline_config": "experiments/english_patcher_pilot.json",
+  "sources": "evidence/english_dataset_sources_20261019.json",
+  "background_utf8_bytes": 5000000000,
+  "parent_background_run_directory": "runs/en-patcher-bg1gb-20261020-01",
+  "comparison_run_directory": "runs/en-patcher-bg1gb-20261020-01",
+  "background_block_utf8_bytes": 25000000,
+  "compress_background_blocks": true,
+  "verify_projection": true,
+  "sampling_seed": 20261022,
+  "wall_clock_limit": null,
+  "tmux_session": "blt-bg5gb-20261020",
+  "comparison": "Nested 1GB to 5GB background; original fixed train/validation labels, K=8, W=unlimited, alpha=kappa=lambda=eta=1, rho=.001, same threshold grid and paired document bootstrap",
+  "sampling": "Same pinned FineWeb revision and four shards; retain all 1GB background, sample new row groups/rows, then length-stratified selection; same approximate deduplication",
+  "storage": "Whole-document 25MB blocks; gzip level 1 preserves every integer context/outcome count; exact sums for fixed input query contexts, not pruning or a general inference speed benchmark",
+  "heldout": "Raw heldout text only for duplicate exclusion; no heldout labels, scores, or new teacher inference"
+}

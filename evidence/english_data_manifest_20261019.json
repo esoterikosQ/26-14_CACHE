@@ -1,0 +1,199 @@
+{
+  "run_id": "en-patcher-20261019-01",
+  "status": "prepared",
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "sources_sha256": "59f447fc847a703d8b355ce767b62f8118b88437993658662f1413c065f06404",
+  "script_sha256": "4474952dbb42ebd1feba4f85817f25e1be4f146a5747f38ea8d700e0ef03832d",
+  "sources": [
+    {
+      "repository": "HuggingFaceFW/fineweb",
+      "requested_revision": "v1.4.0",
+      "resolved_revision": "9bb295ddab0e05d785b879661af7260fed5140fc",
+      "prefix": "data/CC-MAIN-2025-05/",
+      "available_shards": 300,
+      "selected_shards": [
+        "data/CC-MAIN-2025-05/003_00015.parquet",
+        "data/CC-MAIN-2025-05/001_00011.parquet",
+        "data/CC-MAIN-2025-05/002_00008.parquet",
+        "data/CC-MAIN-2025-05/004_00040.parquet"
+      ]
+    },
+    {
+      "repository": "wikimedia/wikipedia",
+      "requested_revision": "main",
+      "resolved_revision": "b04c8d1ceb2f5cd4588862100d08de323dccfbaa",
+      "prefix": "20231101.en/",
+      "available_shards": 41,
+      "selected_shards": [
+        "20231101.en/train-00034-of-00041.parquet",
+        "20231101.en/train-00018-of-00041.parquet"
+      ]
+    }
+  ],
+  "sampled_row_groups": [
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 278
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 625
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/003_00015.parquet",
+      "row_group": 709
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 606
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 705
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/001_00011.parquet",
+      "row_group": 387
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 791
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 309
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/002_00008.parquet",
+      "row_group": 519
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 167
+    },
+    {
+      "source": "HuggingFaceFW/fineweb",
+      "shard": "data/CC-MAIN-2025-05/004_00040.parquet",
+      "row_group": 737
+    },
+    {
+      "source": "wikimedia/wikipedia",
+      "shard": "20231101.en/train-00034-of-00041.parquet",
+      "row_group": 141
+    },
+    {
+      "source": "wikimedia/wikipedia",
+      "shard": "20231101.en/train-00018-of-00041.parquet",
+      "row_group": 47
+    }
+  ],
+  "utf8_length_filter": [
+    256,
+    65536
+  ],
+  "sampling": "Random row groups and row order within each pinned shard; separate background/label pools within each length band before whole-document byte quotas",
+  "deduplication": "Global casefold/whitespace-normalized SHA256 and exact URL; 5-word MinHash 128 permutations, LSH and estimated Jaccard >= 0.8; approximate detection, not an exhaustive guarantee",
+  "raw_text_preserved": true,
+  "whole_document_budget_overshoot_max_bytes": 65535,
+  "packages": {
+    "pyarrow": "26.0.0",
+    "datasketch": "2.0.0",
+    "huggingface-hub": "1.31.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1"
+  },
+  "candidate_documents": 9367,
+  "duplicates_removed": {},
+  "splits": {
+    "background": {
+      "documents": 2241,
+      "utf8_bytes": 10001309,
+      "length_bands": {
+        "short": 888,
+        "medium": 888,
+        "long": 465
+      },
+      "shards": {
+        "data/CC-MAIN-2025-05/002_00008.parquet": 591,
+        "data/CC-MAIN-2025-05/003_00015.parquet": 568,
+        "data/CC-MAIN-2025-05/001_00011.parquet": 570,
+        "data/CC-MAIN-2025-05/004_00040.parquet": 512
+      },
+      "file_sha256": "6b14a9da38a3c3c5369b8f6028bcd02a15806676b2a0d7ae4e50f9c63fb513ae"
+    },
+    "train": {
+      "documents": 898,
+      "utf8_bytes": 4041644,
+      "length_bands": {
+        "short": 356,
+        "medium": 356,
+        "long": 186
+      },
+      "shards": {
+        "data/CC-MAIN-2025-05/001_00011.parquet": 236,
+        "data/CC-MAIN-2025-05/004_00040.parquet": 185,
+        "data/CC-MAIN-2025-05/002_00008.parquet": 235,
+        "data/CC-MAIN-2025-05/003_00015.parquet": 242
+      },
+      "file_sha256": "9de457e8c4fd7edb288a9bb678e2bc6edcb4e57da91f4f240a9abfc5e10066f1"
+    },
+    "validation": {
+      "documents": 111,
+      "utf8_bytes": 463770,
+      "length_bands": {
+        "short": 44,
+        "medium": 44,
+        "long": 23
+      },
+      "shards": {
+        "data/CC-MAIN-2025-05/004_00040.parquet": 23,
+        "data/CC-MAIN-2025-05/003_00015.parquet": 33,
+        "data/CC-MAIN-2025-05/002_00008.parquet": 27,
+        "data/CC-MAIN-2025-05/001_00011.parquet": 28
+      },
+      "file_sha256": "c003140c455046497a53ab096dfc384f7a3ebfc346f1e5dc7aea4583df66b697"
+    },
+    "test": {
+      "documents": 113,
+      "utf8_bytes": 495516,
+      "length_bands": {
+        "short": 45,
+        "medium": 45,
+        "long": 23
+      },
+      "shards": {
+        "data/CC-MAIN-2025-05/003_00015.parquet": 27,
+        "data/CC-MAIN-2025-05/004_00040.parquet": 28,
+        "data/CC-MAIN-2025-05/002_00008.parquet": 24,
+        "data/CC-MAIN-2025-05/001_00011.parquet": 34
+      },
+      "file_sha256": "d6f7b14ef862a1c076f4cce7f2d0028f8c08913f8c9abc6c3ed54f3c216d4eec"
+    },
+    "wikipedia_test": {
+      "documents": 220,
+      "utf8_bytes": 1002062,
+      "length_bands": {
+        "short": 90,
+        "medium": 90,
+        "long": 40
+      },
+      "shards": {
+        "20231101.en/train-00018-of-00041.parquet": 116,
+        "20231101.en/train-00034-of-00041.parquet": 104
+      },
+      "file_sha256": "fb9832076db21acbc17aaa1b4b96259a5ad06b09d9a6765e12db8c45f53d77f7"
+    }
+  },
+  "elapsed_seconds": 34.33294054912403,
+  "peak_host_rss_bytes": 340369408
+}

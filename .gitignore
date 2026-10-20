@@ -3,10 +3,17 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .venv/
+.env
+.env.*
+!.env.example
+.DS_Store
 build/
 dist/
 artifacts/
 outputs/
 data/
+datasets/
+runs/
 *.safetensors
 *.pt
+papers/
