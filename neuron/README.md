@@ -4,6 +4,8 @@
 에이전트는 Neuron에 접속하거나 파일 전송/SLURM 제출을 하지 않는다.
 영어20GB 빈도 자료 확장은 itcerdo에서 별도로 실행한다.
 
+데이터 저장 위치와 작업별 셸 명령은 [command.md](command.md)를 따른다.
+
 ## 배포 범위
 
 - `train_entropy.sh`: 기존 `phdq3/scripts`의 root/SLURM/환경 정책을 참조한 entropy 전용1GPU job.
