@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "owner": "phdq3",
+  "owner_head": "a1d134362f3982749f8787114e1c3b37a6190397",
+  "provenance": "Working-tree export, including uncommitted entropy preparation. Per-file hashes, not owner_head alone, identify this snapshot. Edit in phdq3 and re-export; this is not a second training implementation.",
+  "files": {
+    "blt_hf/__init__.py": "4981c134e251b71df4d0b14388007d103ca98567a13ea544e54bf532797424a8",
+    "blt_hf/entropy_data.py": "6d7194d8c39216d0df5b7a5bd24dad69f541c65b5393a98bd4f5a909b4ea1773",
+    "blt_hf/entropy_train.py": "c0e678012ecea2fd2c35d33387e5df2f6d406e58ebec46b863b2e91b3eb3c5ff",
+    "blt_hf/training.py": "6135611603be7b43d3182c23ad96cdfcf03e7705d44f9caed683887e6d1585d6",
+    "blt_hf/model.py": "028ea6d9223dc76626f6571283681c017665df93bbadb4a9d1afa55a1c68a242",
+    "blt_hf/manifest.py": "441e0e3a1e72fe37b57d8fc592dd873016463bc51df6c8d289103a2bc27560a0",
+    "blt_hf/data_adapter.py": "61cec0f7fb4d93fd7b80e7d2841198de3aa7b69800a28c9cb03c799f64a1d0f2",
+    "blt_hf/attention.py": "6dc89cb026dc4415cfc275383ea6fbf75f95db72a35814993e1e85386a3fdee6",
+    "blt_hf/patching.py": "d8414c0753f9d750ae31ca8fb6fd156c2481b3f69ecd95bae9f206b432d13ad4",
+    "blt_hf/patched/__init__.py": "ca61cf5b07d487894b00924fe9c7c669a57d5ed59bb7af76603e27cd6a949af6",
+    "blt_hf/patched/modeling_blt.py": "61719aa2f0050ad4eb48eee9fbc941bd0de6f7110ccd528359cf096848302746",
+    "blt_hf_checks/check_env.py": "16da3e0acfa254902bdf3df14cad0435dac4534a5260fd98e013ee41d4acd635",
+    "tests/test_hf_entropy.py": "47a9ff3131a7aa5fc060d5acb6bff4882c8106e46da7ddadb8b30fb623a3d562",
+    "tests/test_hf_training.py": "b831cc6d2dab79358e8cf9e89d2725e81267406170c1dc0e6b4fe86db2f6e950",
+    "plan/korean_entropy_preparation.json": "716e17cef6cec1b107e5b2c7eed08d715f6c58cb2dae857664e926ff823888a4"
+  }
+}

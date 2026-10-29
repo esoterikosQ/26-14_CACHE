@@ -1,0 +1,22 @@
+{
+  "training_authorized": false,
+  "checkpoint_revision": "f2aae511e44e2086b1204bc4ddec6ac6c9651332",
+  "model_path": "/scratch/r984a02/phdq3/artifacts/converted/blt-1b-hf-own",
+  "dataset_manifest": null,
+  "run_dir": "/scratch/r984a02/phdq3/outputs/korean_entropy/pending-approved-run",
+  "max_steps": null,
+  "max_train_bytes": null,
+  "max_seconds": null,
+  "max_run_bytes": null,
+  "max_gpu_memory_bytes": null,
+  "min_free_disk_bytes": 107374182400,
+  "chunk_bytes": 256,
+  "accumulation": 4,
+  "save_every": 100,
+  "threads": 4,
+  "seed": 42,
+  "lr": 0.00001,
+  "warmup_steps": 10,
+  "clip_norm": 1.0,
+  "weight_decay": 0.1
+}
