@@ -1,16 +1,15 @@
-"""Export and verify a deployment-only snapshot of the owner entropy runtime."""
+"""Verify the entropy runtime maintained in blt-cache and its SLURM contract."""
 import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path('/scratch/r984a02/phdq3')
+ROOT = Path('/scratch/r984a02/blt-cache')
 FILES = (
     'blt_hf/__init__.py', 'blt_hf/entropy_data.py', 'blt_hf/entropy_train.py',
     'blt_hf/training.py', 'blt_hf/model.py', 'blt_hf/manifest.py',
@@ -26,27 +25,16 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def export(owner):
-    owner = owner.resolve()
+def refresh():
     destination = HERE / 'runtime'
-    if destination.exists() or (HERE / 'runtime-manifest.json').exists():
-        raise FileExistsError('Refusing to overwrite an exported snapshot')
+    manifest_path = HERE / 'runtime-manifest.json'
+    report = json.loads(manifest_path.read_text())
     for name in FILES:
-        if not (owner / name).is_file() or (owner / name).is_symlink():
-            raise ValueError(f'Missing or linked owner file: {name}')
-    destination.mkdir()
-    for name in FILES:
-        target = destination / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(owner / name, target)
-    report = {
-        'schema_version': 1,
-        'owner': 'phdq3',
-        'owner_head': subprocess.check_output(['git', '-C', str(owner), 'rev-parse', 'HEAD'], text=True).strip(),
-        'provenance': 'Working-tree export, including uncommitted entropy preparation. Per-file hashes, not owner_head alone, identify this snapshot. Edit in phdq3 and re-export; this is not a second training implementation.',
-        'files': {name: digest(destination / name) for name in FILES},
-    }
-    with (HERE / 'runtime-manifest.json').open('x') as handle:
+        path = destination / name
+        if not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(destination.resolve()):
+            raise ValueError(f'Missing or linked runtime file: {name}')
+    report['files'] = {name: digest(destination / name) for name in FILES}
+    with manifest_path.open('w') as handle:
         json.dump(report, handle, indent=2)
         handle.write('\n')
     verify()
@@ -66,7 +54,7 @@ def verify(directory=HERE):
 
 def validate_job(config, environment, job_details, root=ROOT, now=None):
     if environment.get('SLURM_SUBMIT_DIR') != str(root) or not environment.get('SLURM_JOB_ID'):
-        raise ValueError('Submit from the owner root inside a SLURM job')
+        raise ValueError('Submit from the blt-cache root inside a SLURM job')
     if environment.get('SLURM_JOB_NUM_NODES') != '1' or environment.get('SLURM_NTASKS', '1') != '1':
         raise ValueError('Only one node/task is supported')
     if environment.get('SLURM_GPUS_ON_NODE') != '1':
@@ -106,14 +94,11 @@ def validate_job(config, environment, job_details, root=ROOT, now=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('export', 'verify', 'validate-job'))
-    parser.add_argument('--owner', type=Path)
+    parser.add_argument('action', choices=('refresh', 'verify', 'validate-job'))
     parser.add_argument('--config', type=Path)
     args = parser.parse_args()
-    if args.action == 'export':
-        if args.owner is None:
-            parser.error('--owner is required')
-        export(args.owner)
+    if args.action == 'refresh':
+        refresh()
     else:
         verify()
         if args.action == 'validate-job':

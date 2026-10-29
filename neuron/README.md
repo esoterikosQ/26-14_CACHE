@@ -9,9 +9,9 @@
 ## 배포 범위
 
 - `train_entropy.sh`: 기존 `phdq3/scripts`의 root/SLURM/환경 정책을 참조한 entropy 전용1GPU job.
-- `runtime/`: 소유 프로젝트 `phdq3`의 파일hash 고정 배포 사본. 기존 `blt_hf/`를 덮어쓰지 않는다.
-- `runtime-manifest.json`: 소유 HEAD와 실제 working-tree 파일SHA256. 미커밋 준비 코드가 포함되므로 HEAD만으로 재현했다고 주장하지 않는다.
-- `bundle.py`: allowlist export/무결성/SLURM 승인 검사. 학습 구현은 소유 프로젝트에서만 수정한 뒤 다시 export한다.
+- `runtime/`: blt-cache에서 직접 관리하는 실행 코드·테스트·설정. phdq3는 최초 코드/정책을 참고한 읽기 전용 프로젝트다.
+- `runtime-manifest.json`: 참조 이력과 현재 파일SHA256. 과거 참조 commit만으로 현재 구현을 재현했다고 주장하지 않는다.
+- `bundle.py`: 무결성/SLURM 승인 검사. 변경은 이 저장소에서만 하고,검사 후 `python neuron/bundle.py refresh`로 manifest를 갱신한다. 참조 프로젝트 export는 하지 않는다.
 - 가중치,원문,체크포인트,`ssh.md`,토큰,환경은 포함하지 않는다. 패키지 설치나 CUDA 모듈 로드도 하지 않는다.
 
 ## 다운로드와 기본 검사
@@ -29,7 +29,8 @@ conda activate phdq_blt_hf
 export CONDA_SH="$(conda info --base)/etc/profile.d/conda.sh"
 python "$BUNDLE/bundle.py" verify
 python -m unittest discover -s "$BUNDLE" -p test_bundle.py -v
-cd /scratch/r984a02/phdq3
+mkdir -p /scratch/r984a02/blt-cache
+cd /scratch/r984a02/blt-cache
 mkdir -p data/korean_cpt/{incoming/nikl,incoming/fineweb2,licenses,manifests,prepared}
 mkdir -p artifacts/korean_entropy outputs/korean_entropy
 export CONFIG="$BUNDLE/entropy.template.json"
@@ -57,18 +58,19 @@ runtime의 `python -m blt_hf.entropy_data --plan <절대경로> --output <신규
 NIKL paragraph/utterance JSON을 지원한다. 실제 수령 schema 확인과 권리/PII/근접중복 분할 검토는 아직 남았다.
 최종평가 자료는 입력하지 않는다. manifest의 승인 필드3종은 검토 없이 true로 바꾸지 않는다.
 
-승인 후 template을 소유 프로젝트의 새 설정 경로로 복사하고 `CONFIG`를 그 절대경로로 지정한다.
+승인 후 template을 `/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/`의 새 설정 경로로 복사하고 `CONFIG`를 그 절대경로로 지정한다.
 `dataset_manifest`,고유 `run_dir`,`max_steps`,`max_train_bytes`,`max_seconds`,
 `max_run_bytes`,`max_gpu_memory_bytes`,승인 여부를 확정한다. 양의 값만 허용한다.
 GPU 상한은 실제 장치 메모리보다 작아야 하며 `max_seconds`는 남은 job 시간보다 최소15분 짧아야 한다.
-고정 공개 entropy revision과 기존 변환본 `artifacts/converted/blt-1b-hf-own`을 사용한다.
+고정 공개 entropy revision의 변환본을 `artifacts/converted/blt-1b-hf-own`에 사용자가 준비한다.
+새 프로젝트 경로에 가중치가 이미 있다고 가정하지 않는다. 기존 phdq3 가중치를 자동 이동/덮어쓰기하지 않는다.
 preflight와 학습 job은 설정 사본을 자체 보고서 디렉터리에 보존한다.
 
 ```bash
 # 승인된 CONFIG를 지정한 뒤 사용자만 실행. 최초에는2step 파일럿.
 sbatch --export=ALL,MODE=pilot,PILOT_STEPS=2 "$BUNDLE/train_entropy.sh"
 # 같은 설정/자료/런타임/장치와 신뢰 가능한 체크포인트로 명시적 재개.
-export RESUME=/scratch/r984a02/phdq3/outputs/korean_entropy/<run>/step-00000002.pt
+export RESUME=/scratch/r984a02/blt-cache/outputs/korean_entropy/<run>/step-00000002.pt
 sbatch --export=ALL,MODE=pilot,PILOT_STEPS=2,RESUME "$BUNDLE/train_entropy.sh"
 # GPU 파일럿/재개/처리량·VRAM·검증 결과 검토 및 본 학습 예산 승인 후에만:
 sbatch --export=ALL,MODE=train,RESUME "$BUNDLE/train_entropy.sh"
@@ -83,7 +85,9 @@ SIGKILL/노드 장애/OOM에는 마지막 완성 checkpoint와 SHA sidecar만 �
 ## 검증 범위
 
 macOS guard3개/shell 구문, itcerdo CPU entropy8개+기존 학습3개 검사가 통과했다.
+경로 정정 후 macOS guard4개(참조 root 거부 포함),entropy7개 통과/optimizer1개 Torch 부재 skip,
+manifest15파일 및 shell 검증을 통과했다. 이전 itcerdo 검사는 계산 코드에 대한 이력이다.
 독립 배포 경로에서도 guard3개/entropy8개와 실제99,512,064모수 BF16 패처 strict load를 확인했다.
-합성 CPU backward는 앞선 준비에서 확인했다. 소유 코드나 배포 사본으로 실제 CPT는 실행하지 않았다.
+합성 CPU backward는 앞선 준비에서 확인했다. 실제 CPT는 실행하지 않았다.
 **Neuron 할당,실제 GPU optimizer·신호 중단·재개,처리량·VRAM,한국어 CPT 품질은 아직 검증하지 않았다.**
 이 bundle은 T12 교사 준비용이며 한국어 본체5개 arm의 학습/비교 구현을 완료했다는 뜻이 아니다.

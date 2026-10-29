@@ -1,28 +1,29 @@
 # Neuron 작업별 명령
 
 모든 명령은 **사용자가 Neuron에서 직접 실행**한다. 셸은 bash 기준이다.
+phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
 현재 제공하는 실행기는 T12 한국어 entropy 교사용이며 본체 ENCODER/GLOBAL/BODY_FULL 학습용이 아니다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
 실제 말뭉치/권리 검토/학습 예산/GPU 파일럿은 아직 완료되지 않았다.
 
 ## 1. 저장 경로
 
-프로젝트 루트는 `/scratch/r984a02/phdq3`로 고정한다. 아래 경로는 모두 Neuron 경로다.
+프로젝트 루트는 `/scratch/r984a02/blt-cache`로 고정한다. 아래 경로는 모두 Neuron 경로다.
 
 | 용도 | 절대 경로 |
 | --- | --- |
 | GitHub 코드 사본 | `$HOME/26-14_CACHE` |
 | 실행 bundle | `$HOME/26-14_CACHE/neuron` |
-| NIKL 수령 원본 ZIP/JSON | `/scratch/r984a02/phdq3/data/korean_cpt/incoming/nikl` |
-| FineWeb2 수령 원본 | `/scratch/r984a02/phdq3/data/korean_cpt/incoming/fineweb2` |
-| 약정/라이선스/출처 설명 | `/scratch/r984a02/phdq3/data/korean_cpt/licenses` |
-| 명시적 입력 파일/분할 계획 | `/scratch/r984a02/phdq3/data/korean_cpt/manifests` |
-| 변환된 train/validation JSONL와 manifest | `/scratch/r984a02/phdq3/data/korean_cpt/prepared/<DATA_ID>` |
-| 기존 BF16 변환 가중치 | `/scratch/r984a02/phdq3/artifacts/converted/blt-1b-hf-own` |
-| 실행별 학습 설정 | `/scratch/r984a02/phdq3/artifacts/korean_entropy/configs/<RUN_ID>.json` |
-| job 환경/preflight/설정 사본 | `/scratch/r984a02/phdq3/artifacts/korean_entropy/neuron-<JOB_ID>-<RESTART>` |
-| 학습 checkpoint/metrics/validation | `/scratch/r984a02/phdq3/outputs/korean_entropy/<RUN_ID>` |
-| SLURM stdout/stderr | `/scratch/r984a02/phdq3/entropy-<JOB_ID>.out` 및 `.err` |
+| NIKL 수령 원본 ZIP/JSON | `/scratch/r984a02/blt-cache/data/korean_cpt/incoming/nikl` |
+| FineWeb2 수령 원본 | `/scratch/r984a02/blt-cache/data/korean_cpt/incoming/fineweb2` |
+| 약정/라이선스/출처 설명 | `/scratch/r984a02/blt-cache/data/korean_cpt/licenses` |
+| 명시적 입력 파일/분할 계획 | `/scratch/r984a02/blt-cache/data/korean_cpt/manifests` |
+| 변환된 train/validation JSONL와 manifest | `/scratch/r984a02/blt-cache/data/korean_cpt/prepared/<DATA_ID>` |
+| 기존 BF16 변환 가중치 | `/scratch/r984a02/blt-cache/artifacts/converted/blt-1b-hf-own` |
+| 실행별 학습 설정 | `/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/<RUN_ID>.json` |
+| job 환경/preflight/설정 사본 | `/scratch/r984a02/blt-cache/artifacts/korean_entropy/neuron-<JOB_ID>-<RESTART>` |
+| 학습 checkpoint/metrics/validation | `/scratch/r984a02/blt-cache/outputs/korean_entropy/<RUN_ID>` |
+| SLURM stdout/stderr | `/scratch/r984a02/blt-cache/entropy-<JOB_ID>.out` 및 `.err` |
 
 **원문과 가중치를 Git clone 안에 넣지 않는다.** 기존 `data/Preprocessed`, `data/Raw`,
 GEC checkpoint와 원본 말뭉치를 덮어쓰거나 재분할하지 않는다. NIKL 원본 ZIP은 보존하고,
@@ -37,20 +38,21 @@ FineWeb2 Parquet 수집/정제 코드는 이 bundle에 없으며, 검토된 JSON
 git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "$HOME/26-14_CACHE"
 cd "$HOME/26-14_CACHE"
 git sparse-checkout set neuron
-git checkout --detach a0cfa521a272ac61f19d60bde17674cb2e86fa56
+git checkout --detach origin/main
 git rev-parse HEAD
 ```
 
 기존 clone을 지정된 검증 버전으로 맞추는 경우, 해당 사본을 사용하는 job이 없고
 `git status --short`에 보존해야 할 변경이 없는지 먼저 확인한다. 강제 checkout은 하지 않는다.
-아래 SHA는 검증한 실행 코드 버전이다. 이후 문서 전용 commit과는 다를 수 있다.
+fetch한 origin/main을 detached HEAD로 고정한 뒤 `git rev-parse HEAD`를 기록한다.
+인계받은 수정 commit인지 확인하고 실행 중에는 갱신하지 않는다. 예전 a0cfa52는 잘못된 phdq3 쓰기 경로가 있으므로 새 실행에 사용하지 않는다.
 
 ```bash
 cd "$HOME/26-14_CACHE"
 git status --short
 git fetch origin
 git sparse-checkout set neuron
-git checkout --detach a0cfa521a272ac61f19d60bde17674cb2e86fa56
+git checkout --detach origin/main
 ```
 
 ## 3. 매 로그인 시 환경과 디렉터리
@@ -59,7 +61,7 @@ git checkout --detach a0cfa521a272ac61f19d60bde17674cb2e86fa56
 `etc/profile.d/conda.sh`를 먼저 source한다. 설치/업그레이드나 `module load cuda`는 하지 않는다.
 
 ```bash
-export ROOT=/scratch/r984a02/phdq3
+export ROOT=/scratch/r984a02/blt-cache
 export BUNDLE="$HOME/26-14_CACHE/neuron"
 conda activate phdq_blt_hf
 export CONDA_SH="$(conda info --base)/etc/profile.d/conda.sh"
@@ -67,6 +69,7 @@ export PYTHONPATH="$BUNDLE/runtime"
 export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 unset RESUME
+mkdir -p "$ROOT"
 cd "$ROOT"
 mkdir -p data/korean_cpt/{incoming/nikl,incoming/fineweb2,licenses,manifests,prepared}
 mkdir -p artifacts/korean_entropy/configs outputs/korean_entropy
@@ -79,7 +82,8 @@ showque
 showappl
 ```
 
-가중치 검사가 실패하면 기존 변환본의 위치와 출처/hash를 확인한 뒤 사용자가 준비한다.
+가중치 검사가 실패하면 변환본의 위치와 출처/hash를 확인한 뒤 사용자가 이 프로젝트 경로에 준비한다.
+새 blt-cache 경로에 기존 자료나 가중치가 자동으로 생기는 것은 아니다. 참조 프로젝트 파일을 자동 이동하지 않는다.
 임의의 다른 HF 모델을 대신 내려받거나 기존 가중치를 덮어쓰지 않는다.
 최소 디스크 여유는 현재 template 기준100GiB다. 큰 원문 변환/hash 검사는 로그인 노드에서 실행하지 않는다.
 

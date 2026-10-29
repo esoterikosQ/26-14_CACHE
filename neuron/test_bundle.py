@@ -20,6 +20,16 @@ class BundleContracts(unittest.TestCase):
     def check(self):
         return validate_job(self.config, self.env, self.job, now=self.now)
 
+    def test_reference_project_is_not_a_submission_or_output_root(self):
+        self.assertEqual(ROOT, Path('/scratch/r984a02/blt-cache'))
+        self.env['SLURM_SUBMIT_DIR'] = '/scratch/r984a02/phdq3'
+        with self.assertRaisesRegex(ValueError, 'blt-cache root'):
+            self.check()
+        self.env['SLURM_SUBMIT_DIR'] = str(ROOT)
+        self.config['run_dir'] = '/scratch/r984a02/phdq3/outputs/korean_entropy/wrong'
+        with self.assertRaisesRegex(ValueError, 'run_dir'):
+            self.check()
+
     def test_default_preflight_and_explicit_training_gates(self):
         for partition in ('amd_a100nv_8', 'amd_a100_4', 'amd_h200nv_8'):
             self.env['SLURM_JOB_PARTITION'] = partition

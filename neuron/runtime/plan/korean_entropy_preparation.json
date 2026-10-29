@@ -1,9 +1,9 @@
 {
   "training_authorized": false,
   "checkpoint_revision": "f2aae511e44e2086b1204bc4ddec6ac6c9651332",
-  "model_path": "/home/itcmaster/projects/phdq3/artifacts/converted/blt-1b-hf-own",
+  "model_path": "/scratch/r984a02/blt-cache/artifacts/converted/blt-1b-hf-own",
   "dataset_manifest": null,
-  "run_dir": "/home/itcmaster/projects/phdq3/outputs/korean_entropy/pending-approved-run",
+  "run_dir": "/scratch/r984a02/blt-cache/outputs/korean_entropy/pending-approved-run",
   "max_steps": null,
   "max_train_bytes": null,
   "max_seconds": null,

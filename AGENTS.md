@@ -8,6 +8,17 @@ Keep this repository an installable Python package independent of the
 tokenizers, optimizer checkpoints, or Slurm outputs here. Preserve the public
 `phdq_blt_cache` import and require explicit opt-in for new cache behavior.
 
+## Reference-only projects
+
+As clarified by the user on 2026-10-29, `phdq3` is read-only reference for
+this work. Write all new code, configurations, commands, tests and progress
+logs in `blt-cache`, never in `phdq3`. Maintain the entropy runtime directly
+under `neuron/runtime/`; do not edit the reference project and export it.
+Neuron data and output paths belong under `/scratch/r984a02/blt-cache`.
+The user executes all Neuron operations and transfers reviewed runtime logs
+through GitHub using `runtimelog/`. Small sanitized logs are allowed there;
+never commit secrets, raw corpora, weights or optimizer checkpoints.
+
 The native A100 validation comparison supports output parity for one guarded
 beam-1/batch-1 configuration only. Do not generalize it to other datasets,
 models, beams, GPU architectures, or decoder caching without new measurements.
