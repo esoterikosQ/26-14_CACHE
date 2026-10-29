@@ -1,16 +1,17 @@
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
-from bundle import FILES, ROOT, digest, validate_job, verify
+from bundle import FILES, ROOT, SUBMIT_ROOT, digest, validate_job, verify
 
 
 class BundleContracts(unittest.TestCase):
     def setUp(self):
         self.config = json.loads((Path(__file__).parent / 'entropy.template.json').read_text())
-        self.env = {'SLURM_SUBMIT_DIR': str(ROOT), 'SLURM_JOB_ID': '123',
+        self.env = {'SLURM_SUBMIT_DIR': str(SUBMIT_ROOT), 'SLURM_JOB_ID': '123',
                     'SLURM_JOB_NUM_NODES': '1', 'SLURM_NTASKS': '1',
                     'SLURM_GPUS_ON_NODE': '1', 'SLURM_CPUS_PER_TASK': '8',
                     'SLURM_JOB_PARTITION': 'amd_a100nv_8'}
@@ -22,13 +23,30 @@ class BundleContracts(unittest.TestCase):
 
     def test_reference_project_is_not_a_submission_or_output_root(self):
         self.assertEqual(ROOT, Path('/scratch/r984a02/blt-cache'))
-        self.env['SLURM_SUBMIT_DIR'] = '/scratch/r984a02/phdq3'
-        with self.assertRaisesRegex(ValueError, 'blt-cache root'):
-            self.check()
-        self.env['SLURM_SUBMIT_DIR'] = str(ROOT)
+        self.assertEqual(SUBMIT_ROOT, Path('/scratch/r984a02'))
+        self.assertEqual(self.check(), 'preflight')
+        for directory in (str(ROOT), '/scratch/r984a02/phdq3'):
+            self.env['SLURM_SUBMIT_DIR'] = directory
+            with self.assertRaisesRegex(ValueError, 'Submit directory'):
+                self.check()
+        self.env['SLURM_SUBMIT_DIR'] = str(SUBMIT_ROOT)
         self.config['run_dir'] = '/scratch/r984a02/phdq3/outputs/korean_entropy/wrong'
         with self.assertRaisesRegex(ValueError, 'run_dir'):
             self.check()
+
+    def test_shell_submission_guard_reaches_environment_only_from_submit_root(self):
+        script = Path(__file__).with_name('train_entropy.sh')
+        with tempfile.TemporaryDirectory() as directory:
+            environment = {'BUNDLE': '/unused/bundle', 'CONFIG': '/unused/config.json',
+                           'CONDA_SH': str(Path(directory) / 'missing.sh'), 'SLURM_JOB_ID': '123'}
+            for submit_dir in (str(SUBMIT_ROOT), str(ROOT), '/scratch/r984a02/phdq3'):
+                environment['SLURM_SUBMIT_DIR'] = submit_dir
+                result = subprocess.run(['/bin/bash', str(script)], env=environment,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                expected = ('Existing conda activation script missing' if submit_dir == str(SUBMIT_ROOT)
+                            else 'Submit with sbatch from /scratch/r984a02')
+                self.assertIn(expected, result.stderr)
 
     def test_default_preflight_and_explicit_training_gates(self):
         for partition in ('amd_a100nv_8', 'amd_a100_4', 'amd_h200nv_8'):

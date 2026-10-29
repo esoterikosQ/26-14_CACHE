@@ -10,6 +10,7 @@ import subprocess
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path('/scratch/r984a02/blt-cache')
+SUBMIT_ROOT = Path('/scratch/r984a02')
 FILES = (
     'blt_hf/__init__.py', 'blt_hf/entropy_data.py', 'blt_hf/entropy_train.py',
     'blt_hf/training.py', 'blt_hf/model.py', 'blt_hf/manifest.py',
@@ -53,8 +54,8 @@ def verify(directory=HERE):
 
 
 def validate_job(config, environment, job_details, root=ROOT, now=None):
-    if environment.get('SLURM_SUBMIT_DIR') != str(root) or not environment.get('SLURM_JOB_ID'):
-        raise ValueError('Submit from the blt-cache root inside a SLURM job')
+    if environment.get('SLURM_SUBMIT_DIR') != str(SUBMIT_ROOT) or not environment.get('SLURM_JOB_ID'):
+        raise ValueError(f'Submit directory must be {SUBMIT_ROOT} inside a SLURM job')
     if environment.get('SLURM_JOB_NUM_NODES') != '1' or environment.get('SLURM_NTASKS', '1') != '1':
         raise ValueError('Only one node/task is supported')
     if environment.get('SLURM_GPUS_ON_NODE') != '1':

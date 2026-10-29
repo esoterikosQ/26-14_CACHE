@@ -12,9 +12,12 @@
 | --- | --- |
 | 코드·테스트·준비 설정 | `neuron/runtime/` |
 | SLURM 실행기·환경 guard·명령 문서 | `neuron/` |
+| Neuron sbatch 제출 cwd | `/scratch/r984a02` |
+| Neuron 코드 clone·실행 스크립트 | `/scratch/r984a02/blt-cache` · `/scratch/r984a02/blt-cache/neuron/train_entropy.sh` |
 | 이번 프로젝트의 Neuron 데이터·설정·출력 루트 | `/scratch/r984a02/blt-cache` |
 | GitHub 저장소 | `https://github.com/esoterikosQ/26-14_CACHE.git` |
 | 검토한 실행 결과 전달 | `runtimelog/<작업명-JobID>/` |
 
 Neuron의 실행·전송·제출은 전부 사용자가 직접 수행한다.
+제출은 부모 디렉터리에서 절대경로 스크립트로 한다. job 내부 cwd는 `neuron/runtime/`이다.
 기존 phdq3 데이터·가중치·실행 환경을 자동으로 옮기거나 덮어쓰지 않는다.

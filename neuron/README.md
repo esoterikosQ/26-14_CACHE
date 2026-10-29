@@ -8,7 +8,7 @@
 
 ## 배포 범위
 
-- `train_entropy.sh`: 기존 `phdq3/scripts`의 root/SLURM/환경 정책을 참조한 entropy 전용1GPU job.
+- `train_entropy.sh`: 기존 `phdq3/scripts`의 partition/CPU-GPU 비율/환경/comment 정책을 참조한 entropy 전용1GPU job. 제출 cwd는 사용자 확인 조건인 `/scratch/r984a02`이며 참조 코드의 프로젝트-root 제출 검사는 따르지 않는다.
 - `runtime/`: blt-cache에서 직접 관리하는 실행 코드·테스트·설정. phdq3는 최초 코드/정책을 참고한 읽기 전용 프로젝트다.
 - `runtime-manifest.json`: 참조 이력과 현재 파일SHA256. 과거 참조 commit만으로 현재 구현을 재현했다고 주장하지 않는다.
 - `bundle.py`: 무결성/SLURM 승인 검사. 변경은 이 저장소에서만 하고,검사 후 `python neuron/bundle.py refresh`로 manifest를 갱신한다. 참조 프로젝트 export는 하지 않는다.
@@ -19,12 +19,13 @@
 아래 명령은 **사용자가 Neuron에서** 실행한다. 기존 clone이 있으면 새로 clone하지 말고 작업 중 job이 없는지 확인 후 지정 commit을 checkout한다.
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "$HOME/26-14_CACHE"
-cd "$HOME/26-14_CACHE"
+cd /scratch/r984a02
+git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "/scratch/r984a02/blt-cache"
+cd "/scratch/r984a02/blt-cache"
 git sparse-checkout set neuron
 git checkout --detach HEAD
 git rev-parse HEAD
-export BUNDLE="$HOME/26-14_CACHE/neuron"
+export BUNDLE="/scratch/r984a02/blt-cache/neuron"
 conda activate phdq_blt_hf
 export CONDA_SH="$(conda info --base)/etc/profile.d/conda.sh"
 python "$BUNDLE/bundle.py" verify
@@ -36,8 +37,13 @@ mkdir -p artifacts/korean_entropy outputs/korean_entropy
 export CONFIG="$BUNDLE/entropy.template.json"
 showque
 showappl
+cd /scratch/r984a02
 sbatch --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh"
 ```
+
+코드·데이터·출력은 `/scratch/r984a02/blt-cache`에 두고 제출만 부모에서 한다.
+job은 `$BUNDLE/runtime`으로 이동하며 stdout/stderr는 프로젝트 절대경로에 기록한다.
+따라서 프로젝트 디렉터리를 먼저 준비해야 한다. 기존 홈 clone이나 실행 중 job은 자동 이동하지 않는다.
 
 `git rev-parse HEAD`가 인계받은 검증 commit과 일치하는지 확인한다. 실행/재개 중에는 clone을 갱신하지 않는다.
 기본 job은 기존 한국어 목표인 H2001GPU/CPU8/host RAM48G/2시간이다. 이는 제출 자원이며 학습 예산 승인이 아니다.
@@ -68,6 +74,7 @@ preflight와 학습 job은 설정 사본을 자체 보고서 디렉터리에 보
 
 ```bash
 # 승인된 CONFIG를 지정한 뒤 사용자만 실행. 최초에는2step 파일럿.
+cd /scratch/r984a02
 sbatch --export=ALL,MODE=pilot,PILOT_STEPS=2 "$BUNDLE/train_entropy.sh"
 # 같은 설정/자료/런타임/장치와 신뢰 가능한 체크포인트로 명시적 재개.
 export RESUME=/scratch/r984a02/blt-cache/outputs/korean_entropy/<run>/step-00000002.pt
@@ -87,6 +94,8 @@ SIGKILL/노드 장애/OOM에는 마지막 완성 checkpoint와 SHA sidecar만 �
 macOS guard3개/shell 구문, itcerdo CPU entropy8개+기존 학습3개 검사가 통과했다.
 경로 정정 후 macOS guard4개(참조 root 거부 포함),entropy7개 통과/optimizer1개 Torch 부재 skip,
 manifest15파일 및 shell 검증을 통과했다. 이전 itcerdo 검사는 계산 코드에 대한 이력이다.
+제출 cwd 분리 후 macOS guard5개(Python 승인 및 실제 shell 진입/거부 포함)와 bash 구문 검사를 통과했다.
+이는 로컬 계약 검사이며 Neuron의 sbatch 동작을 실측한 결과는 아니다.
 독립 배포 경로에서도 guard3개/entropy8개와 실제99,512,064모수 BF16 패처 strict load를 확인했다.
 합성 CPU backward는 앞선 준비에서 확인했다. 실제 CPT는 실행하지 않았다.
 **Neuron 할당,실제 GPU optimizer·신호 중단·재개,처리량·VRAM,한국어 CPT 품질은 아직 검증하지 않았다.**

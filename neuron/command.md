@@ -8,12 +8,15 @@ phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코
 
 ## 1. 저장 경로
 
-프로젝트 루트는 `/scratch/r984a02/blt-cache`로 고정한다. 아래 경로는 모두 Neuron 경로다.
+제출 cwd는 `/scratch/r984a02`, 프로젝트 루트는 `/scratch/r984a02/blt-cache`다.
+스크립트는 하위 프로젝트에 있어도 부모 디렉터리에서 절대경로로 sbatch에 전달한다.
+job 내부 작업 cwd는 `$BUNDLE/runtime`이며 제출 cwd와 독립적이다. 아래 경로는 모두 Neuron 경로다.
 
 | 용도 | 절대 경로 |
 | --- | --- |
-| GitHub 코드 사본 | `$HOME/26-14_CACHE` |
-| 실행 bundle | `$HOME/26-14_CACHE/neuron` |
+| sbatch 제출 cwd | `/scratch/r984a02` |
+| GitHub 코드 사본 | `/scratch/r984a02/blt-cache` |
+| 실행 bundle | `/scratch/r984a02/blt-cache/neuron` |
 | NIKL 수령 원본 ZIP/JSON | `/scratch/r984a02/blt-cache/data/korean_cpt/incoming/nikl` |
 | FineWeb2 수령 원본 | `/scratch/r984a02/blt-cache/data/korean_cpt/incoming/fineweb2` |
 | 약정/라이선스/출처 설명 | `/scratch/r984a02/blt-cache/data/korean_cpt/licenses` |
@@ -25,7 +28,8 @@ phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코
 | 학습 checkpoint/metrics/validation | `/scratch/r984a02/blt-cache/outputs/korean_entropy/<RUN_ID>` |
 | SLURM stdout/stderr | `/scratch/r984a02/blt-cache/entropy-<JOB_ID>.out` 및 `.err` |
 
-**원문과 가중치를 Git clone 안에 넣지 않는다.** 기존 `data/Preprocessed`, `data/Raw`,
+**원문과 가중치를 Git에 추가하지 않는다.** 프로젝트 내 `data/`, `artifacts/`, `outputs/`는
+Git 제외 경로다. 로그 전달도 아래의 검토한 `runtimelog`만 stage한다. 기존 `data/Preprocessed`, `data/Raw`,
 GEC checkpoint와 원본 말뭉치를 덮어쓰거나 재분할하지 않는다. NIKL 원본 ZIP은 보존하고,
 해제본은 별도 하위 디렉터리에 둔다. 변환기는 ZIP/Parquet을 직접 읽지 않는다.
 FineWeb2 Parquet 수집/정제 코드는 이 bundle에 없으며, 검토된 JSONL 변환본이 있어야 한다.
@@ -33,10 +37,13 @@ FineWeb2 Parquet 수집/정제 코드는 이 bundle에 없으며, 검토된 JSON
 ## 2. 코드 다운로드
 
 처음 한 번만 실행한다. 기존 clone이 있으면 다음의 갱신 절차를 사용한다.
+목적지가 이미 있고 clone이 아니라면 덮어쓰거나 삭제하지 말고 경로 상태를 먼저 확인한다.
+이전 안내의 홈 디렉터리 clone이나 그곳을 쓰는 실행 중 job은 자동 이동/변경하지 않는다.
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "$HOME/26-14_CACHE"
-cd "$HOME/26-14_CACHE"
+cd /scratch/r984a02
+git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "/scratch/r984a02/blt-cache"
+cd "/scratch/r984a02/blt-cache"
 git sparse-checkout set neuron
 git checkout --detach origin/main
 git rev-parse HEAD
@@ -48,7 +55,7 @@ fetch한 origin/main을 detached HEAD로 고정한 뒤 `git rev-parse HEAD`를 �
 인계받은 수정 commit인지 확인하고 실행 중에는 갱신하지 않는다. 예전 a0cfa52는 잘못된 phdq3 쓰기 경로가 있으므로 새 실행에 사용하지 않는다.
 
 ```bash
-cd "$HOME/26-14_CACHE"
+cd "/scratch/r984a02/blt-cache"
 git status --short
 git fetch origin
 git sparse-checkout set neuron
@@ -61,8 +68,9 @@ git checkout --detach origin/main
 `etc/profile.d/conda.sh`를 먼저 source한다. 설치/업그레이드나 `module load cuda`는 하지 않는다.
 
 ```bash
+export SUBMIT_ROOT=/scratch/r984a02
 export ROOT=/scratch/r984a02/blt-cache
-export BUNDLE="$HOME/26-14_CACHE/neuron"
+export BUNDLE="/scratch/r984a02/blt-cache/neuron"
 conda activate phdq_blt_hf
 export CONDA_SH="$(conda info --base)/etc/profile.d/conda.sh"
 export PYTHONPATH="$BUNDLE/runtime"
@@ -90,9 +98,11 @@ showappl
 ## 4. 데이터 없이 GPU 환경 검사
 
 이 명령은 optimizer를 실행하지 않는다. H2001GPU/CPU8/RAM48G/2시간이 기본이다.
+3절에서 프로젝트 디렉터리를 먼저 준비해야 Slurm이 절대경로 stdout/stderr를 열 수 있다.
+이후 모든 sbatch도 같은 제출 cwd를 사용한다.
 
 ```bash
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 export CONFIG="$BUNDLE/entropy.template.json"
 unset RESUME
 JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh")
@@ -157,12 +167,12 @@ FineWeb2 JSONL을 추가할 때도 동일 계획의 files 배열에 실제 경�
 
 ## 6. 할당 노드에서 자료 준비
 
-확인된 CPU 전용 partition은 아직 없으므로 아래는 알려진 H2001GPU 할당을 사용한다.
-변환 자체는 CPU 작업이며 GPU를 이용하지 않는다. CPU 전용 배정이 확인되면 별도 제출 방식을 정한다.
+아래는 기존 H2001GPU 할당 방식이다. 변환 자체는 CPU 작업이며 GPU를 이용하지 않는다.
+첨부 자료의 CPU partition을 사용하는 제출 방식은 이번 cwd 수정에서 변경하지 않았다.
 로그인 셸의 ROOT/BUNDLE/PLAN/PREPARED/CONDA_SH가 설정된 상태에서 실행한다.
 
 ```bash
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 srun --partition=amd_h200nv_8 --nodes=1 --ntasks=1 --gres=gpu:1 \
   --cpus-per-task=8 --mem=48G --time=02:00:00 \
   --comment='field=nlp;appl=pytorch' --pty bash
@@ -227,7 +237,7 @@ GPU 예산은 실제 VRAM보다 작게, threads는 할당 CPU 이하로 지정�
 실제 전체 자료 hash/중복 검사가 포함되므로 로그인 노드에서 직접 실행하지 않는다.
 
 ```bash
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 unset RESUME
 JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh")
 export JOB_ID="${JOB_ID%%;*}"
@@ -239,7 +249,7 @@ export JOB_ID="${JOB_ID%%;*}"
 기본2시간 할당이 부족하면 site 정책과 승인 예산 안에서 `--time`을 지정한다. 자동 확대하지 않는다.
 
 ```bash
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 unset RESUME
 JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2 "$BUNDLE/train_entropy.sh")
 export JOB_ID="${JOB_ID%%;*}"
@@ -271,7 +281,7 @@ export RESUME="$RUN_DIR/step-00000002.pt"
 test -r "$RESUME"
 test -r "${RESUME%.pt}.sha256"
 test ! -e "$RUN_DIR/.active"
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2,RESUME "$BUNDLE/train_entropy.sh")
 export JOB_ID="${JOB_ID%%;*}"
 ```
@@ -284,7 +294,7 @@ export RESUME="$RUN_DIR/step-00000004.pt"
 test -r "$RESUME"
 test -r "${RESUME%.pt}.sha256"
 test ! -e "$RUN_DIR/.active"
-cd "$ROOT"
+cd "$SUBMIT_ROOT"
 JOB_ID=$(sbatch --parsable --export=ALL,MODE=train,RESUME "$BUNDLE/train_entropy.sh")
 export JOB_ID="${JOB_ID%%;*}"
 ```
@@ -322,14 +332,14 @@ Neuron의 실행과 업로드는 모두 사용자가 직접 수행한다. 실패
 
 ### Neuron: 로그용 clone 준비
 
-실행용 `$HOME/26-14_CACHE`는 고정 commit/detached HEAD를 유지한다.
+실행용 `/scratch/r984a02/blt-cache`는 고정 commit/detached HEAD를 유지한다.
 실행 중 코드 변경과 detached HEAD에서의 push 혼동을 피하려고 **로그용 clone을 따로 둔다.**
 처음 한 번만 다음을 실행한다. 기존 로그용 clone이 있으면 clone 명령은 생략한다.
 
 ```bash
 git clone --filter=blob:none --sparse --branch main \
-  https://github.com/esoterikosQ/26-14_CACHE.git "$HOME/26-14_CACHE-logs"
-git -C "$HOME/26-14_CACHE-logs" sparse-checkout set runtimelog neuron
+  https://github.com/esoterikosQ/26-14_CACHE.git "/scratch/r984a02/blt-cache-logs"
+git -C "/scratch/r984a02/blt-cache-logs" sparse-checkout set runtimelog neuron
 ```
 
 최신 명령 문서는 로그용 clone의 `neuron/command.md`에서 볼 수 있지만,
@@ -344,7 +354,7 @@ push 권한이 있는 기존 Git 인증을 사용한다. 토큰을 명령/URL/�
 새 로그 디렉터리 이름을 사용하며 기존 결과를 덮어쓰지 않는다.
 
 ```bash
-export LOG_REPO="$HOME/26-14_CACHE-logs"
+export LOG_REPO="/scratch/r984a02/blt-cache-logs"
 git -C "$LOG_REPO" status --short
 git -C "$LOG_REPO" pull --ff-only
 : "${ROOT:?Set ROOT}" "${JOB_ID:?Set the completed JOB_ID}"
@@ -372,7 +382,7 @@ if [[ -n "${RUN_DIR:-}" && -d "$RUN_DIR" ]]; then
     find "$RUN_DIR" -maxdepth 1 -type f -name 'validation-*.json' -exec cp -n {} "$DEST/" \;
 fi
 sacct -j "$JOB_ID" --format=JobID,State,ExitCode,Elapsed,MaxRSS > "$DEST/slurm-status.txt"
-git -C "$HOME/26-14_CACHE" rev-parse HEAD > "$DEST/runtime-commit.txt"
+git -C "/scratch/r984a02/blt-cache" rev-parse HEAD > "$DEST/runtime-commit.txt"
 find "$DEST" -maxdepth 1 -type f -print
 du -sh "$DEST"
 ```
