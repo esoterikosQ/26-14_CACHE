@@ -9,7 +9,9 @@ phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코
 ## 1. 저장 경로
 
 제출 cwd는 `/scratch/r984a02`, 프로젝트 루트는 `/scratch/r984a02/blt-cache`다.
-스크립트는 하위 프로젝트에 있어도 부모 디렉터리에서 절대경로로 sbatch에 전달한다.
+처음 clone할 때를 제외한 Neuron 명령은 `blt-cache`에서 시작한다.
+제출 블록은 `pushd ..`로 부모에 이동해 상대경로 스크립트를 제출한 뒤 `popd`로 돌아온다.
+실행기의 BUNDLE/CONFIG/RESUME와 설정에 저장할 경로만 현재 위치에서 절대경로로 만든다.
 job 내부 작업 cwd는 `$BUNDLE/runtime`이며 제출 cwd와 독립적이다. 아래 경로는 모두 Neuron 경로다.
 
 | 용도 | 절대 경로 |
@@ -36,14 +38,14 @@ FineWeb2 Parquet 수집/정제 코드는 이 bundle에 없으며, 검토된 JSON
 
 ## 2. 코드 다운로드
 
-처음 한 번만 실행한다. 기존 clone이 있으면 다음의 갱신 절차를 사용한다.
+처음 한 번만 `/scratch/r984a02`에서 실행한다. 이미 `blt-cache` 안에 있으면
+clone 블록을 건너뛰고 다음의 갱신 절차를 사용한다.
 목적지가 이미 있고 clone이 아니라면 덮어쓰거나 삭제하지 말고 경로 상태를 먼저 확인한다.
 이전 안내의 홈 디렉터리 clone이나 그곳을 쓰는 실행 중 job은 자동 이동/변경하지 않는다.
 
 ```bash
-cd /scratch/r984a02
-git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git "/scratch/r984a02/blt-cache"
-cd "/scratch/r984a02/blt-cache"
+git clone --filter=blob:none --sparse https://github.com/esoterikosQ/26-14_CACHE.git blt-cache
+cd blt-cache
 git sparse-checkout set neuron
 git checkout --detach origin/main
 git rev-parse HEAD
@@ -55,7 +57,6 @@ fetch한 origin/main을 detached HEAD로 고정한 뒤 `git rev-parse HEAD`를 �
 인계받은 수정 commit인지 확인하고 실행 중에는 갱신하지 않는다. 예전 a0cfa52는 잘못된 phdq3 쓰기 경로가 있으므로 새 실행에 사용하지 않는다.
 
 ```bash
-cd "/scratch/r984a02/blt-cache"
 git status --short
 git fetch origin
 git sparse-checkout set neuron
@@ -68,30 +69,45 @@ git checkout --detach origin/main
 `etc/profile.d/conda.sh`를 먼저 source한다. 설치/업그레이드나 `module load cuda`는 하지 않는다.
 
 ```bash
-export SUBMIT_ROOT=/scratch/r984a02
-export ROOT=/scratch/r984a02/blt-cache
-export BUNDLE="/scratch/r984a02/blt-cache/neuron"
+export BUNDLE="$(pwd)/neuron"
 conda activate phdq_blt_hf
 export CONDA_SH="$(conda info --base)/etc/profile.d/conda.sh"
 export PYTHONPATH="$BUNDLE/runtime"
 export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 unset RESUME
-mkdir -p "$ROOT"
-cd "$ROOT"
 mkdir -p data/korean_cpt/{incoming/nikl,incoming/fineweb2,licenses,manifests,prepared}
 mkdir -p artifacts/korean_entropy/configs outputs/korean_entropy
-python "$BUNDLE/bundle.py" verify
-python -m unittest discover -s "$BUNDLE" -p test_bundle.py -v
-test -r "$ROOT/artifacts/converted/blt-1b-hf-own/config.json"
-test -r "$ROOT/artifacts/converted/blt-1b-hf-own/model.safetensors"
-df -h "$ROOT"
+python neuron/bundle.py verify
+python -m unittest discover -s neuron -p test_bundle.py -v
+df -h .
 showque
 showappl
 ```
 
-가중치 검사가 실패하면 변환본의 위치와 출처/hash를 확인한 뒤 사용자가 이 프로젝트 경로에 준비한다.
-새 blt-cache 경로에 기존 자료나 가중치가 자동으로 생기는 것은 아니다. 참조 프로젝트 파일을 자동 이동하지 않는다.
+최초 준비에서 아직 가중치를 복사하지 않았다면 아래를 한 번만 실행한다.
+원본 경로는 사용자가 전달한 Neuron 파일 목록에서 확인했다. `outputs/.../step-*` 학습 checkpoint는 사용하지 않는다.
+목적지가 이미 있으면 mkdir에서 중단한다. 원본과 실패한 복사본은 삭제하거나 덮어쓰지 않는다.
+
+```bash
+test -r ../phdq3/artifacts/converted/blt-1b-hf-own/config.json &&
+test -r ../phdq3/artifacts/converted/blt-1b-hf-own/model.safetensors &&
+mkdir -p artifacts/converted &&
+mkdir artifacts/converted/blt-1b-hf-own &&
+cp -L ../phdq3/artifacts/converted/blt-1b-hf-own/{config.json,model.safetensors} \
+    artifacts/converted/blt-1b-hf-own/
+```
+
+준비된 파일을 확인한다. `READY`가 없으면 제출하지 않는다.
+이 검사는 읽기 가능 여부만 확인하며 출처/hash·모델 로딩·호환성 검증 완료를 뜻하지 않는다.
+
+```bash
+test -r artifacts/converted/blt-1b-hf-own/config.json &&
+test -r artifacts/converted/blt-1b-hf-own/model.safetensors &&
+printf '%s\n' READY
+```
+
+새 blt-cache 경로에 기존 자료나 가중치가 자동으로 생기는 것은 아니다.
 임의의 다른 HF 모델을 대신 내려받거나 기존 가중치를 덮어쓰지 않는다.
 최소 디스크 여유는 현재 template 기준100GiB다. 큰 원문 변환/hash 검사는 로그인 노드에서 실행하지 않는다.
 
@@ -102,10 +118,11 @@ showappl
 이후 모든 sbatch도 같은 제출 cwd를 사용한다.
 
 ```bash
-cd "$SUBMIT_ROOT"
-export CONFIG="$BUNDLE/entropy.template.json"
+export CONFIG="$(pwd)/neuron/entropy.template.json"
 unset RESUME
-JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh")
+pushd .. >/dev/null
+JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight blt-cache/neuron/train_entropy.sh)
+popd >/dev/null
 export JOB_ID="${JOB_ID%%;*}"
 squeue -j "$JOB_ID"
 ```
@@ -114,8 +131,8 @@ job 완료 후 확인한다. 정상 새 job의 restart 번호는0이다. 재queu
 
 ```bash
 sacct -j "$JOB_ID" --format=JobID,State,ExitCode,Elapsed,MaxRSS
-cat "$ROOT/artifacts/korean_entropy/neuron-${JOB_ID}-0/environment.json"
-cat "$ROOT/artifacts/korean_entropy/neuron-${JOB_ID}-0/preflight.json"
+cat "artifacts/korean_entropy/neuron-${JOB_ID}-0/environment.json"
+cat "artifacts/korean_entropy/neuron-${JOB_ID}-0/preflight.json"
 ```
 
 환경 `status=pass`와 `training_ready=true`는 다른 조건이다. 미승인 template은
@@ -127,15 +144,15 @@ cat "$ROOT/artifacts/korean_entropy/neuron-${JOB_ID}-0/preflight.json"
 먼저 수령 파일을 확인한다. 아래 명령은 원문 내용을 출력하지 않는다.
 
 ```bash
-find "$ROOT/data/korean_cpt/incoming" -type f -print
-find "$ROOT/data/korean_cpt/licenses" -type f -print
+find data/korean_cpt/incoming -type f -print
+find data/korean_cpt/licenses -type f -print
 export DATA_ID=korean-entropy-v001
-export PLAN="$ROOT/data/korean_cpt/manifests/${DATA_ID}.json"
-export PREPARED="$ROOT/data/korean_cpt/prepared/$DATA_ID"
+export PLAN="data/korean_cpt/manifests/${DATA_ID}.json"
+export PREPARED="data/korean_cpt/prepared/$DATA_ID"
 python - <<'PY'
 import json, os
 from pathlib import Path
-root = Path(os.environ['ROOT'])
+root = Path.cwd()
 plan = {'files': [
     {'path': str(root / 'data/korean_cpt/incoming/nikl/REPLACE_TRAIN.json'),
      'source': 'REPLACE_NIKL_CORPUS_VERSION', 'split': 'train', 'format': 'nikl_paragraph'},
@@ -169,27 +186,34 @@ FineWeb2 JSONL을 추가할 때도 동일 계획의 files 배열에 실제 경�
 
 아래는 기존 H2001GPU 할당 방식이다. 변환 자체는 CPU 작업이며 GPU를 이용하지 않는다.
 첨부 자료의 CPU partition을 사용하는 제출 방식은 이번 cwd 수정에서 변경하지 않았다.
-로그인 셸의 ROOT/BUNDLE/PLAN/PREPARED/CONDA_SH가 설정된 상태에서 실행한다.
+로그인 셸의 BUNDLE/PLAN/PREPARED/CONDA_SH가 설정된 상태에서 실행한다.
 
 ```bash
-cd "$SUBMIT_ROOT"
+pushd .. >/dev/null
 srun --partition=amd_h200nv_8 --nodes=1 --ntasks=1 --gres=gpu:1 \
   --cpus-per-task=8 --mem=48G --time=02:00:00 \
   --comment='field=nlp;appl=pytorch' --pty bash
 ```
 
-할당된 셸 안에서 실행한다. 같은 출력 디렉터리는 재사용하지 않으며 실패한 부분 산출물도 보존한다.
+할당된 셸은 부모 디렉터리에서 시작한다. 아래처럼 blt-cache로 들어가 실행한다.
+같은 출력 디렉터리는 재사용하지 않으며 실패한 부분 산출물도 보존한다.
 
 ```bash
 source "$CONDA_SH"
 conda activate phdq_blt_hf
 export PYTHONPATH="$BUNDLE/runtime"
 export OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 MKL_NUM_THREADS=8
-cd "$BUNDLE/runtime"
-python blt_hf_checks/check_env.py
+cd blt-cache
+python neuron/runtime/blt_hf_checks/check_env.py
 python -m blt_hf.entropy_data --plan "$PLAN" --output "$PREPARED"
 python -m json.tool "$PREPARED/manifest.json"
 exit
+```
+
+할당 셸 종료 후 로그인 셸에서 원래 blt-cache로 돌아온다.
+
+```bash
+popd >/dev/null
 ```
 
 출력은 `train.jsonl`, `validation.jsonl`, `manifest.json`이다. exact 중복/hash 검사는 수행하지만
@@ -210,20 +234,20 @@ vi "$PREPARED/manifest.json"
 
 ```bash
 export RUN_ID=ko-entropy-h200-pilot-20261029-01
-export CONFIG="$ROOT/artifacts/korean_entropy/configs/${RUN_ID}.json"
-export RUN_DIR="$ROOT/outputs/korean_entropy/$RUN_ID"
+export CONFIG="$(pwd)/artifacts/korean_entropy/configs/${RUN_ID}.json"
+export RUN_DIR="outputs/korean_entropy/$RUN_ID"
 python - <<'PY'
 import json, os
 from pathlib import Path
-config = json.loads((Path(os.environ['BUNDLE']) / 'entropy.template.json').read_text())
-config['dataset_manifest'] = str(Path(os.environ['PREPARED']) / 'manifest.json')
-config['run_dir'] = os.environ['RUN_DIR']
+config = json.loads(Path('neuron/entropy.template.json').read_text())
+config['dataset_manifest'] = str((Path(os.environ['PREPARED']) / 'manifest.json').resolve())
+config['run_dir'] = str(Path(os.environ['RUN_DIR']).resolve())
 with Path(os.environ['CONFIG']).open('x') as handle:
     json.dump(config, handle, indent=2)
     handle.write('\n')
 PY
-vi "$CONFIG"
-python -m json.tool "$CONFIG"
+vi "artifacts/korean_entropy/configs/${RUN_ID}.json"
+python -m json.tool "artifacts/korean_entropy/configs/${RUN_ID}.json"
 ```
 
 합의된 양의 정수 예산5개 `max_steps`, `max_train_bytes`, `max_seconds`, `max_run_bytes`,
@@ -237,9 +261,10 @@ GPU 예산은 실제 VRAM보다 작게, threads는 할당 CPU 이하로 지정�
 실제 전체 자료 hash/중복 검사가 포함되므로 로그인 노드에서 직접 실행하지 않는다.
 
 ```bash
-cd "$SUBMIT_ROOT"
 unset RESUME
-JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh")
+pushd .. >/dev/null
+JOB_ID=$(sbatch --parsable --export=ALL,MODE=preflight blt-cache/neuron/train_entropy.sh)
+popd >/dev/null
 export JOB_ID="${JOB_ID%%;*}"
 ```
 
@@ -249,9 +274,10 @@ export JOB_ID="${JOB_ID%%;*}"
 기본2시간 할당이 부족하면 site 정책과 승인 예산 안에서 `--time`을 지정한다. 자동 확대하지 않는다.
 
 ```bash
-cd "$SUBMIT_ROOT"
 unset RESUME
-JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2 "$BUNDLE/train_entropy.sh")
+pushd .. >/dev/null
+JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2 blt-cache/neuron/train_entropy.sh)
+popd >/dev/null
 export JOB_ID="${JOB_ID%%;*}"
 squeue -j "$JOB_ID"
 ```
@@ -260,8 +286,8 @@ job이 끝난 뒤 결과를 확인한다. `validation-*.json`이 없으면 검�
 
 ```bash
 sacct -j "$JOB_ID" --format=JobID,State,ExitCode,Elapsed,MaxRSS
-tail -n 40 "$ROOT/entropy-${JOB_ID}.out"
-tail -n 40 "$ROOT/entropy-${JOB_ID}.err"
+tail -n 40 "entropy-${JOB_ID}.out"
+tail -n 40 "entropy-${JOB_ID}.err"
 find "$RUN_DIR" -maxdepth 1 -type f -print
 cat "$RUN_DIR/metrics.jsonl"
 cat "$RUN_DIR/validation-00000002.json"
@@ -277,12 +303,13 @@ cat "$RUN_DIR/validation-00000002.json"
 checkpoint 파일명은 실제 완료 step에 맞춘다. 아래는2step 완료한 경우다.
 
 ```bash
-export RESUME="$RUN_DIR/step-00000002.pt"
-test -r "$RESUME"
-test -r "${RESUME%.pt}.sha256"
+export RESUME="$(pwd)/$RUN_DIR/step-00000002.pt"
+test -r "$RUN_DIR/step-00000002.pt"
+test -r "$RUN_DIR/step-00000002.sha256"
 test ! -e "$RUN_DIR/.active"
-cd "$SUBMIT_ROOT"
-JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2,RESUME "$BUNDLE/train_entropy.sh")
+pushd .. >/dev/null
+JOB_ID=$(sbatch --parsable --export=ALL,MODE=pilot,PILOT_STEPS=2,RESUME blt-cache/neuron/train_entropy.sh)
+popd >/dev/null
 export JOB_ID="${JOB_ID%%;*}"
 ```
 
@@ -290,12 +317,13 @@ export JOB_ID="${JOB_ID%%;*}"
 원래 승인된 총 예산 안에서 같은 실행을 이어간다.
 
 ```bash
-export RESUME="$RUN_DIR/step-00000004.pt"
-test -r "$RESUME"
-test -r "${RESUME%.pt}.sha256"
+export RESUME="$(pwd)/$RUN_DIR/step-00000004.pt"
+test -r "$RUN_DIR/step-00000004.pt"
+test -r "$RUN_DIR/step-00000004.sha256"
 test ! -e "$RUN_DIR/.active"
-cd "$SUBMIT_ROOT"
-JOB_ID=$(sbatch --parsable --export=ALL,MODE=train,RESUME "$BUNDLE/train_entropy.sh")
+pushd .. >/dev/null
+JOB_ID=$(sbatch --parsable --export=ALL,MODE=train,RESUME blt-cache/neuron/train_entropy.sh)
+popd >/dev/null
 export JOB_ID="${JOB_ID%%;*}"
 ```
 
@@ -308,8 +336,8 @@ export JOB_ID="${JOB_ID%%;*}"
 squeue -u "$USER"
 scontrol show job "$JOB_ID"
 sacct -j "$JOB_ID" --format=JobID,State,ExitCode,Elapsed,MaxRSS
-tail -n 40 "$ROOT/entropy-${JOB_ID}.out"
-tail -n 40 "$ROOT/entropy-${JOB_ID}.err"
+tail -n 40 "entropy-${JOB_ID}.out"
+tail -n 40 "entropy-${JOB_ID}.err"
 ```
 
 학습 실행기가 시작되어 metrics가 기록되는 상태에서 저장 후 중단을 요청한다.
@@ -332,14 +360,14 @@ Neuron의 실행과 업로드는 모두 사용자가 직접 수행한다. 실패
 
 ### Neuron: 로그용 clone 준비
 
-실행용 `/scratch/r984a02/blt-cache`는 고정 commit/detached HEAD를 유지한다.
+실행용 `blt-cache`는 고정 commit/detached HEAD를 유지한다. 이 절도 blt-cache 안에서 실행한다.
 실행 중 코드 변경과 detached HEAD에서의 push 혼동을 피하려고 **로그용 clone을 따로 둔다.**
 처음 한 번만 다음을 실행한다. 기존 로그용 clone이 있으면 clone 명령은 생략한다.
 
 ```bash
 git clone --filter=blob:none --sparse --branch main \
-  https://github.com/esoterikosQ/26-14_CACHE.git "/scratch/r984a02/blt-cache-logs"
-git -C "/scratch/r984a02/blt-cache-logs" sparse-checkout set runtimelog neuron
+    https://github.com/esoterikosQ/26-14_CACHE.git ../blt-cache-logs
+git -C ../blt-cache-logs sparse-checkout set runtimelog neuron
 ```
 
 최신 명령 문서는 로그용 clone의 `neuron/command.md`에서 볼 수 있지만,
@@ -350,17 +378,17 @@ push 권한이 있는 기존 Git 인증을 사용한다. 토큰을 명령/URL/�
 
 완료한 작업의 JOB_ID, 필요하면 RUN_DIR을 앞 절과 같이 지정한다.
 아래는 새 preflight 결과 수집 예시다. 파일럿/학습이면 LOG_ID 접두부를 바꾸고
-실제 RUN_DIR을 지정한다. 재queue된 job은 실제 RESTART 번호를 사용한다.
+실제 RUN_DIR을 `outputs/korean_entropy/<RUN_ID>` 형태의 상대경로로 지정한다.
+재queue된 job은 실제 RESTART 번호를 사용한다.
 새 로그 디렉터리 이름을 사용하며 기존 결과를 덮어쓰지 않는다.
 
 ```bash
-export LOG_REPO="/scratch/r984a02/blt-cache-logs"
-git -C "$LOG_REPO" status --short
-git -C "$LOG_REPO" pull --ff-only
-: "${ROOT:?Set ROOT}" "${JOB_ID:?Set the completed JOB_ID}"
+git -C ../blt-cache-logs status --short
+git -C ../blt-cache-logs pull --ff-only
+: "${JOB_ID:?Set the completed JOB_ID}"
 export RESTART=0
 export LOG_ID="preflight-${JOB_ID}-${RESTART}"
-export DEST="$LOG_REPO/runtimelog/$LOG_ID"
+export DEST="../blt-cache-logs/runtimelog/$LOG_ID"
 mkdir "$DEST"
 ```
 
@@ -368,10 +396,10 @@ mkdir가 실패하면 기존 디렉터리에 계속 복사하지 말고 새 LOG_
 작업에 따라 존재하는 작은 파일만 복사한다. 원본은 그대로 보존한다.
 
 ```bash
-for path in "$ROOT/entropy-${JOB_ID}.out" "$ROOT/entropy-${JOB_ID}.err"; do
+for path in "entropy-${JOB_ID}.out" "entropy-${JOB_ID}.err"; do
     if [[ -f "$path" ]]; then cp -n "$path" "$DEST/"; fi
 done
-REPORT_DIR="$ROOT/artifacts/korean_entropy/neuron-${JOB_ID}-${RESTART}"
+REPORT_DIR="artifacts/korean_entropy/neuron-${JOB_ID}-${RESTART}"
 for name in environment.json preflight.json config.json runtime-manifest.json; do
     if [[ -f "$REPORT_DIR/$name" ]]; then cp -n "$REPORT_DIR/$name" "$DEST/"; fi
 done
@@ -382,7 +410,7 @@ if [[ -n "${RUN_DIR:-}" && -d "$RUN_DIR" ]]; then
     find "$RUN_DIR" -maxdepth 1 -type f -name 'validation-*.json' -exec cp -n {} "$DEST/" \;
 fi
 sacct -j "$JOB_ID" --format=JobID,State,ExitCode,Elapsed,MaxRSS > "$DEST/slurm-status.txt"
-git -C "/scratch/r984a02/blt-cache" rev-parse HEAD > "$DEST/runtime-commit.txt"
+git rev-parse HEAD > "$DEST/runtime-commit.txt"
 find "$DEST" -maxdepth 1 -type f -print
 du -sh "$DEST"
 ```
@@ -396,22 +424,22 @@ du -sh "$DEST"
 기존 staged 변경이 있으면 먼저 그 작업을 정리한다. `git add .`는 사용하지 않는다.
 
 ```bash
-git -C "$LOG_REPO" diff --cached --name-only
-git -C "$LOG_REPO" add -- "runtimelog/$LOG_ID"
-git -C "$LOG_REPO" diff --cached --stat
-git -C "$LOG_REPO" diff --cached -- "runtimelog/$LOG_ID"
+git -C ../blt-cache-logs diff --cached --name-only
+git -C ../blt-cache-logs add -- "runtimelog/$LOG_ID"
+git -C ../blt-cache-logs diff --cached --stat
+git -C ../blt-cache-logs diff --cached -- "runtimelog/$LOG_ID"
 ```
 
 staged 목록이 해당 결과만 포함하는 것을 확인한 뒤 실행한다.
 
 ```bash
-git -C "$LOG_REPO" commit -m "Record Neuron results: $LOG_ID"
-git -C "$LOG_REPO" push origin main
-git -C "$LOG_REPO" rev-parse HEAD
+git -C ../blt-cache-logs commit -m "Record Neuron results: $LOG_ID"
+git -C ../blt-cache-logs push origin main
+git -C ../blt-cache-logs rev-parse HEAD
 ```
 
 push가 원격 갱신으로 거부되면 강제 push하지 않는다. 로그용 clone에 미커밋 변경이 없는지
-확인하고 `git pull --rebase origin main` 후 충돌이 없을 때만 다시 push한다.
+확인하고 `git -C ../blt-cache-logs pull --rebase origin main` 후 충돌이 없을 때만 다시 push한다.
 충돌이 있으면 양쪽 로그를 보존하고 해결한다. 실행용 clone을 갱신하지 않는다.
 
 ### 로컬: GitHub에서 결과 받기
