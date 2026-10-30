@@ -86,7 +86,7 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                 raise ValueError(f'No JSON files in source: {spec["source"]}')
             if 'expected_files' in spec and len(paths) != spec['expected_files']:
                 raise ValueError(f'Source file count mismatch: {spec["source"]}')
-            counts = {'files': 0, 'documents': 0, 'utf8_bytes': 0}
+            counts = {'files': 0, 'documents': 0, 'utf8_bytes': 0, 'empty_form_parts': 0}
             source_counts[spec['source']] = counts
             for path in paths:
                 if path.is_symlink() or not path.resolve().is_relative_to(folder.resolve()):
@@ -108,14 +108,20 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                     if not isinstance(document, dict) or not isinstance(document.get('id'), str) or not document['id']:
                         raise ValueError(f'Nonempty document id required: {relative}:{position}')
                     parts = document.get(field)
-                    if (not isinstance(parts, list) or not parts or
-                            any(not isinstance(part, dict) or not isinstance(part.get('form'), str) or
-                                not part['form'] for part in parts)):
-                        raise ValueError(f'Expected nonempty form strings: {relative}:{position}')
+                    if not isinstance(parts, list) or not parts:
+                        raise ValueError(f'Expected nonempty {field} list: {relative}:{position}')
+                    for part_index, part in enumerate(parts):
+                        if not isinstance(part, dict) or not isinstance(part.get('form'), str):
+                            form_type = ('missing' if isinstance(part, dict) and 'form' not in part else
+                                         type(part.get('form') if isinstance(part, dict) else part).__name__)
+                            raise ValueError(f'Expected form string: {relative}:{position} '
+                                             f'{field}[{part_index}] form_type={form_type}')
+                    empty_parts = sum(part['form'] == '' for part in parts)
                     text = '\n'.join(part['form'] for part in parts)
                     normalized = ' '.join(unicodedata.normalize('NFC', text).split())
                     if not normalized:
-                        raise ValueError(f'Whitespace-only document: {relative}:{position}')
+                        raise ValueError(f'Empty or whitespace-only document: {relative}:{position} '
+                                         f'{field}_parts={len(parts)} empty_form_parts={empty_parts}')
                     row = {'id': document['id'], 'source': spec['source'], 'text': text}
                     if len((json.dumps(row, ensure_ascii=False) + '\n').encode('utf-8')) > MAX_RECORD_BYTES:
                         raise ValueError(f'Record exceeds 16MiB: {relative}:{position}')
@@ -139,6 +145,7 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                             connection.execute('INSERT INTO links VALUES (?, ?, ?)', (kind, token, number))
                     counts['documents'] += 1
                     counts['utf8_bytes'] += len(text.encode('utf-8'))
+                    counts['empty_form_parts'] += empty_parts
                 counts['files'] += 1
                 file_count += 1
                 connection.commit()

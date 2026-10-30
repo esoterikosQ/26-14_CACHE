@@ -206,6 +206,31 @@ class EntropyCorpusContracts(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 split_corpus(audit, root / 'prepared', 20, 20, 42, min_free_bytes=0)
 
+    def test_empty_form_parts_preserve_document_separators(self):
+        from blt_hf.entropy_corpus import audit_corpus, split_corpus
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            incoming, catalog = self.corpus_fixture(root)
+            expected, original_hashes = [], {}
+            for source, field in [('spoken', 'utterance'), ('written', 'paragraph')]:
+                path = incoming / source / 'sample.JSON'
+                payload = json.loads(path.read_text())
+                parts = payload['document'][0][field]
+                parts.insert(0, {'form': ''})
+                parts.append({'form': ''})
+                expected.append('\n'.join(part['form'] for part in parts))
+                path.write_text(json.dumps(payload))
+                original_hashes[path] = file_sha256(path)
+            report = audit_corpus(incoming, catalog, root / 'audit', min_free_bytes=0)
+            self.assertEqual(report['input_documents'], 125)
+            for source in ('spoken', 'written'):
+                self.assertEqual(report['sources'][source]['empty_form_parts'], 2)
+            split_corpus(root / 'audit', root / 'prepared', 20, 20, 42, min_free_bytes=0)
+            texts = [json.loads(line)['text'] for split in ('train', 'validation', 'test')
+                     for line in (root / f'prepared/{split}.jsonl').read_text().splitlines()]
+            self.assertTrue(all(text in texts for text in expected))
+            self.assertEqual({path: file_sha256(path) for path in original_hashes}, original_hashes)
+
     def test_corpus_fails_closed_on_conflicting_identity_and_bad_schema(self):
         from blt_hf.entropy_corpus import audit_corpus
         with tempfile.TemporaryDirectory() as directory:
@@ -219,10 +244,21 @@ class EntropyCorpusContracts(unittest.TestCase):
                 audit_corpus(incoming, catalog, root / 'conflict', min_free_bytes=0)
             self.assertFalse((root / 'conflict/audit.json').exists())
             payload['document'].pop()
-            payload['document'][0]['utterance'][0]['form'] = ''
+            for value in (None, 7, False, [], {}):
+                payload['document'][0]['utterance'][0]['form'] = value
+                path.write_text(json.dumps(payload))
+                kind = type(value).__name__
+                with self.assertRaisesRegex(ValueError, f'Expected form string: .*utterance\\[0\\] form_type={kind}'):
+                    audit_corpus(incoming, catalog, root / f'invalid-{kind}', min_free_bytes=0)
+            del payload['document'][0]['utterance'][0]['form']
             path.write_text(json.dumps(payload))
-            with self.assertRaisesRegex(ValueError, 'nonempty form'):
-                audit_corpus(incoming, catalog, root / 'invalid', min_free_bytes=0)
+            with self.assertRaisesRegex(ValueError, 'form_type=missing'):
+                audit_corpus(incoming, catalog, root / 'missing-form', min_free_bytes=0)
+            for number, value in enumerate(('', ' \t')):
+                payload['document'][0]['utterance'][0]['form'] = value
+                path.write_text(json.dumps(payload))
+                with self.assertRaisesRegex(ValueError, 'Empty or whitespace-only document: .*utterance_parts=1'):
+                    audit_corpus(incoming, catalog, root / f'empty-document-{number}', min_free_bytes=0)
             payload['document'][0]['utterance'][0]['form'] = 'valid'
             path.write_text(json.dumps(payload))
             (incoming / 'spoken/escape.json').symlink_to(catalog)

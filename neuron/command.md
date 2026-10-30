@@ -196,8 +196,10 @@ unzip -n data/korean_cpt/incoming/nikl/CORPUS.zip \
 ### 입력 형식과 보존 규칙
 
 모든 `document[]`를 읽고 form을 LF로 연결한다. JSONL은 한 행에 문서1개와 `id`, `source`, `text`를 쓴다.
+문서 내부의 빈 문자열 form은 삭제하지 않고 LF 구분자까지 보존하며 출처별 `empty_form_parts`로 집계한다.
 UTF-8 본문은 정규화하거나 자르지 않는다. 단일 JSON512MiB 초과/JSONL 한 행16MiB 초과,
-빈 본문/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 오류로 중단한다.
+문서 전체가 비거나 공백뿐인 경우/누락·비문자열 form/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 중단한다.
+구조 오류는 원문 값 대신 발화·문단 위치와 자료형을 표시한다. original_form으로 자동 대체하지 않는다.
 실패한 부분 산출물도 보존하며 새 버전 디렉터리로 다시 실행한다.
 
 ## 6. 현재 셸에서 자료 준비
@@ -215,6 +217,10 @@ df -h .
 
 ### 6-1. 문서 및 중복 관계 audit
 
+2026-10-30 사용자 실행의 nikl-v001은 첫 출처의 form 검사에서 실패했다. 실패 디렉터리는
+삭제하거나 재사용하지 않는다. 코드 갱신 후 아래처럼 새 nikl-v002에서 처음부터 읽는다.
+자동 재개 기능은 없으며 원본 JSON은 수정하지 않는다. 아래 split과 보고서 복사도 같은 audit를 가리킨다.
+
 이미 풀린10폴더를 카탈로그대로 읽어 문서/본문 hash/출처/파일 hash를 SQLite에 기록한다.
 전체 본문을 RAM에 모으지 않고 JSON1파일씩 읽으며 문서 연결 정보만 RAM에 둔다.
 기본으로100GiB 여유 공간을 남기고,입력 파일 크기의2배를 추가 여유로 확인한다.
@@ -225,11 +231,12 @@ SQLite와 파생 JSONL이 모두 본문을 저장하므로 디스크 여유도 �
 PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus audit \
     --input-root data/korean_cpt/incoming/nikl \
     --sources neuron/runtime/plan/nikl_sources.json \
-    --output data/korean_cpt/audits/nikl-v001
-python -m json.tool data/korean_cpt/audits/nikl-v001/audit.json
+    --output data/korean_cpt/audits/nikl-v002
+python -m json.tool data/korean_cpt/audits/nikl-v002/audit.json
 ```
 
 500파일마다 진행 개수를 출력한다. 성공 보고서의 `status=complete`,출처별 files/documents/utf8_bytes,
+`empty_form_parts`를 확인한다. 빈 form 허용은 문서/발화 제외나 본문 대체가 아니다.
 `exact_duplicate_documents`, `groups`, `largest_group_unique_documents`를 확인한다.
 예상은10출처110611JSON이지110611문서가 아니다. 큰 그룹이나 source/ID 충돌은 원인을 확인한다.
 실패한 audit에는 성공 표식인 audit.json이 없고 split은 진행하지 않는다.
@@ -253,7 +260,7 @@ audit 결과 검토 후에만 실행한다. 아래는 train/validation/test 약9
 
 ```bash
 PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus split \
-    --audit data/korean_cpt/audits/nikl-v001 \
+    --audit data/korean_cpt/audits/nikl-v002 \
     --output data/korean_cpt/prepared/korean-entropy-v001 \
     --validation-percent 1 --test-percent 1 --seed 42
 python -m json.tool data/korean_cpt/prepared/korean-entropy-v001/report.json
@@ -273,7 +280,7 @@ test는 `held_out_test`로 별도 보관해 학습에 넘기지 않는다. test�
 ```bash
 mkdir -p runtimelog
 mkdir runtimelog/nikl-prep-v001 &&
-cp -n data/korean_cpt/audits/nikl-v001/audit.json runtimelog/nikl-prep-v001/
+cp -n data/korean_cpt/audits/nikl-v002/audit.json runtimelog/nikl-prep-v001/
 ```
 
 split 완료 후 같은 로그 디렉터리에 다음 보고서만 추가한다. 선별 commit/push는11절을 따르되
