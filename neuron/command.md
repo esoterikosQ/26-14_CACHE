@@ -179,8 +179,7 @@ df -h .
 unzip -l data/korean_cpt/incoming/nikl/CORPUS.zip
 ```
 
-큰 압축 해제는 로그인 노드 대신6절의 할당 셸에서 한다. 할당 셸에서 blt-cache로 들어온 뒤
-다음을 실행하고, 완료 후 `exit`로 로그인 셸에 돌아온다. 변환 명령은 아직 실행하지 않는다.
+추가 ZIP을 풀 때는 현재 셸의 blt-cache에서 다음을 실행한다. 별도 자원 할당은 필요 없다.
 ZIP마다 다른 새 디렉터리를 사용한다. 이미 있는 목적지는 mkdir에서 중단하며 unzip -n은 덮어쓰지 않는다.
 
 ```bash
@@ -201,26 +200,15 @@ UTF-8 본문은 정규화하거나 자르지 않는다. 단일 JSON512MiB 초과
 빈 본문/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 오류로 중단한다.
 실패한 부분 산출물도 보존하며 새 버전 디렉터리로 다시 실행한다.
 
-## 6. 할당 노드에서 자료 준비
+## 6. 현재 셸에서 자료 준비
 
-스캔·분할·ZIP 해제는 CPU 작업이므로 GPU 없이 CPU 할당에서 실행한다.
+스캔·분할·ZIP 해제는 현재 셸에서 직접 실행한다. Slurm/GPU/별도 CPU 할당은 필요 없다.
 blt-cache에서 시작한다. 아직 nikl 위치라면 `cd ../../../..`로 먼저 돌아온다.
-`showque`에서 cpu partition과 자원을 확인하고 site 허용 범위에서 실행한다. 에이전트가 제출하지 않는다.
-
-```bash
-cd ..
-srun --partition=cpu --nodes=1 --ntasks=1 \
-  --cpus-per-task=8 --mem=48G --time=02:00:00 \
-  --comment='field=nlp;appl=pytorch' --pty bash
-```
-
-할당된 셸은 부모 디렉터리에서 시작한다. 아래처럼 blt-cache로 들어가 실행한다.
 같은 출력 디렉터리는 재사용하지 않으며 실패한 부분 산출물도 보존한다.
+이미 phdq_blt_hf 환경이면 conda activate도 생략한다.
 
 ```bash
-source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate phdq_blt_hf
-cd blt-cache
 python neuron/bundle.py verify
 df -h .
 ```
@@ -231,7 +219,7 @@ df -h .
 전체 본문을 RAM에 모으지 않고 JSON1파일씩 읽으며 문서 연결 정보만 RAM에 둔다.
 기본으로100GiB 여유 공간을 남기고,입력 파일 크기의2배를 추가 여유로 확인한다.
 SQLite와 파생 JSONL이 모두 본문을 저장하므로 디스크 여유도 필요하다.100GiB는 최대 사용량이 아닌
-최소 여유다. 기본 할당2시간 내 완료 시간은 미측정이며 중단되면 새 audit 버전으로 다시 시작한다.
+최소 여유다. 처리 시간은 미측정이며 중단되면 새 audit 버전으로 다시 시작한다.
 
 ```bash
 PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus audit \
@@ -293,18 +281,6 @@ split 완료 후 같은 로그 디렉터리에 다음 보고서만 추가한다.
 
 ```bash
 cp -n data/korean_cpt/prepared/korean-entropy-v001/report.json runtimelog/nikl-prep-v001/
-```
-
-작업을 마치면 할당 셸을 종료하고 로그인 셸에서 프로젝트로 돌아온다.
-
-```bash
-exit
-```
-
-다음 명령은 할당 셸 종료 후 로그인 셸에서 실행한다.
-
-```bash
-cd blt-cache
 ```
 
 위 자료 준비는 근접 중복·PII 검토를 대신하지 않는다. 다음2개 값은 검토 완료 후에만 수정한다.
