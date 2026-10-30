@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "excluded_directories": ["NIKL_DIALOGUE_v1.2"],
+  "sources": [
+    {"directory": "NIKL_DIALOGUE_2020_v1.4", "source": "NIKL_DIALOGUE_2020_v1.4", "format": "nikl_utterance", "expected_files": 2232},
+    {"directory": "NIKL_DIALOGUE_2021_v1.1", "source": "NIKL_DIALOGUE_2021_v1.1", "format": "nikl_utterance", "expected_files": 4143},
+    {"directory": "NIKL_DIALOGUE_2022_v1.0", "source": "NIKL_DIALOGUE_2022_v1.0", "format": "nikl_utterance", "expected_files": 2654},
+    {"directory": "NIKL_DIALOGUE_2023_v1.1", "source": "NIKL_DIALOGUE_2023_v1.1", "format": "nikl_utterance", "expected_files": 1973},
+    {"directory": "NIKL_DIALOGUE_2024_v1.0", "source": "NIKL_DIALOGUE_2024_v1.0", "format": "nikl_utterance", "expected_files": 3227},
+    {"directory": "NIKL_DIALOGUE_2025_v1.0", "source": "NIKL_DIALOGUE_2025_v1.0", "format": "nikl_utterance", "expected_files": 2927},
+    {"directory": "NIKL_OM_2021_v1.1", "source": "NIKL_OM_2021_v1.1", "format": "nikl_utterance", "expected_files": 47421},
+    {"directory": "NIKL_SPOKEN_v1.2", "source": "NIKL_SPOKEN_v1.2", "format": "nikl_utterance", "expected_files": 25696},
+    {"directory": "NIKL_WRITTEN 2025_v1.0", "source": "NIKL_WRITTEN 2025_v1.0", "format": "nikl_paragraph", "expected_files": 10293},
+    {"directory": "NIKL_WRITTEN(v1.2)", "source": "NIKL_WRITTEN(v1.2)", "format": "nikl_paragraph", "expected_files": 10045}
+  ]
+}

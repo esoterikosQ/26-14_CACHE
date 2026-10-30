@@ -134,6 +134,41 @@ cat artifacts/korean_entropy/neuron-953179-0/preflight.json
 
 ## 5. ZIP 해제와 입력 계획
 
+### 2026-10-30 수신 구조 확인
+
+사용자가 아래 디렉터리별 JSON 개수와 대표1파일의 구조를 전달했다.
+후속 확인에서 DIALOGUE_v1.2는 SPOKEN_v1.2를 중복 배치한 것이라고 확정했다.
+그 사본은 사용자가 제거하며,아래10출처 카탈로그는 폴더가 남아 있어도 그 사본을 읽지 않는다.
+모두 `data/korean_cpt/incoming/nikl` 바로 아래에 이미 풀려 있으므로 재해제하거나
+아래 예시의 `extracted/CORPUS`로 옮길 필요가 없다. 원본 ZIP/JSON은 그대로 보존한다.
+**제공된 train/validation/test 분할은 없다.** 아래 개수는 문서 수나 고유 문서 수가 아닌 JSON 파일 수다.
+
+| 디렉터리 | JSON 파일 수 | 대표 파일 형식 |
+| --- | ---: | --- |
+| NIKL_DIALOGUE_2020_v1.4 | 2232 | nikl_utterance |
+| NIKL_DIALOGUE_2021_v1.1 | 4143 | nikl_utterance |
+| NIKL_DIALOGUE_2022_v1.0 | 2654 | nikl_utterance |
+| NIKL_DIALOGUE_2023_v1.1 | 1973 | nikl_utterance |
+| NIKL_DIALOGUE_2024_v1.0 | 3227 | nikl_utterance |
+| NIKL_DIALOGUE_2025_v1.0 | 2927 | nikl_utterance |
+| NIKL_OM_2021_v1.1 | 47421 | nikl_utterance |
+| NIKL_SPOKEN_v1.2 | 25696 | nikl_utterance |
+| NIKL_WRITTEN 2025_v1.0 | 10293 | nikl_paragraph |
+| NIKL_WRITTEN(v1.2) | 10045 | nikl_paragraph |
+
+중복 사본 제외 후 합계110611파일이며 각 폴더의 대표1파일만 확인한 결과다.
+전체 파일은 아래 audit에서 확인하며 카탈로그의 예상 파일 수와 다르면 중단한다.
+대표 JSON들은 `document[].id`와 `utterance[].form` 또는 `paragraph[].form`을 갖는다.
+기존 변환기는 `form`을 LF로 연결하고 `original_form`/화자/시간/metadata 값은 학습 본문에 넣지 않는다.
+OM 대표 JSON은 `document`4개를 담으며 나머지 대표 JSON은1개다. 분할 단위는 JSON 파일이나
+발화/문단이 아니라 `document[]`의 문서다. 동일 문서의 발화/문단을 다른 split으로 나누지 않는다.
+
+별도 `entropy_corpus`의 audit/split으로 전체 문서를 읽어 확인한다. 범위는 이번 NIKL10출처이며
+FineWeb2 혼합이나 기존 평가 자료의 재분할은 하지 않는다. 수동 파일 배정 예시는 미분할 입력에
+맞지 않아 제거했다. 자료 준비는 학습 실행이나 검토 승인과 다르다.
+
+### 추가 ZIP이 있을 때만 해제
+
 원본 ZIP은 `data/korean_cpt/incoming/nikl`에 그대로 둔다. 먼저 파일 목록과 디스크 여유를 확인한다.
 아래 `CORPUS.zip`은 실제 받은 ZIP 파일명으로 바꾼다. unzip -l은 압축 해제 전 파일 목록과
 비압축 크기를 보여준다. 목록에 절대경로나 `../`가 있으면 풀지 말고 확인한다.
@@ -159,51 +194,22 @@ unzip -n data/korean_cpt/incoming/nikl/CORPUS.zip \
 터미널에 직접 입력하고 채팅이나 명령 인자에 넣지 않는다. 원본 ZIP은 삭제하지 않는다.
 압축 해제 실패나 파일명 깨짐이 있으면 변환을 진행하지 말고 오류를 확인한다.
 
-로그인 셸의 blt-cache에서 JSON 파일 목록을 확인하고 입력 계획을 만든다.
+### 입력 형식과 보존 규칙
 
-```bash
-find data/korean_cpt/incoming/nikl/extracted -type f -iname '*.json' -print
-python - <<'PY'
-import json
-from pathlib import Path
-root = Path.cwd()
-plan = {'files': [
-    {'path': str(root / 'data/korean_cpt/incoming/nikl/extracted/CORPUS/REPLACE_TRAIN.json'),
-     'source': 'REPLACE_NIKL_CORPUS_VERSION', 'split': 'train', 'format': 'nikl_paragraph'},
-    {'path': str(root / 'data/korean_cpt/incoming/nikl/extracted/CORPUS/REPLACE_VALIDATION.json'),
-     'source': 'REPLACE_NIKL_CORPUS_VERSION', 'split': 'validation', 'format': 'nikl_paragraph'}
-]}
-with Path('data/korean_cpt/manifests/korean-entropy-v001.json').open('x') as handle:
-    json.dump(plan, handle, ensure_ascii=False, indent=2)
-    handle.write('\n')
-PY
-vi data/korean_cpt/manifests/korean-entropy-v001.json
-python -m json.tool data/korean_cpt/manifests/korean-entropy-v001.json
-```
-
-`REPLACE_...`를 실제 파일/출처 버전으로 수정한 뒤 진행한다. 위 이름은 실제 수령 파일명이 아니다.
-원문 전체를 자동 분할하는 명령이 아니다. **각 입력 파일 전체를 지정한 split에 넣으므로**
-이미 검토한 문서 단위 train/validation 파일 목록만 지정한다. 혼합 split 파일은 먼저 별도 준비가 필요하다.
-원본의 제공 validation/test를 임의 재분할하거나 최종평가 파일을 여기에 넣지 않는다.
-
-지원 형식은 다음과 같다.
-
-- `nikl_paragraph`: `document[].id`, `document[].paragraph[].form`.
-- `nikl_utterance`: `document[].id`, `document[].utterance[].form`.
-- `jsonl`: 각 행에 비어 있지 않은 문자열 `id`, `source`, `text`. 행의 source는 계획의 source와 같아야 한다.
-
-NIKL form은 LF로 연결하며 Unicode 정규화는 하지 않는다. 단일 NIKL JSON512MiB 초과 또는
-JSONL 한 행16MiB 초과는 거부한다. 실제 schema가 다르면 변환기를 먼저 보완해야 한다.
-FineWeb2 JSONL을 추가할 때도 동일 계획의 files 배열에 실제 경로/source/split을 명시한다.
+모든 `document[]`를 읽고 form을 LF로 연결한다. JSONL은 한 행에 문서1개와 `id`, `source`, `text`를 쓴다.
+UTF-8 본문은 정규화하거나 자르지 않는다. 단일 JSON512MiB 초과/JSONL 한 행16MiB 초과,
+빈 본문/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 오류로 중단한다.
+실패한 부분 산출물도 보존하며 새 버전 디렉터리로 다시 실행한다.
 
 ## 6. 할당 노드에서 자료 준비
 
-아래는 기존 H2001GPU 할당 방식이다. 변환 자체는 CPU 작업이며 GPU를 이용하지 않는다.
-ZIP 해제도 이 할당 셸에서 한다. CPU partition 전환은 이번 명령표 수정에 포함하지 않았다.
+스캔·분할·ZIP 해제는 CPU 작업이므로 GPU 없이 CPU 할당에서 실행한다.
+blt-cache에서 시작한다. 아직 nikl 위치라면 `cd ../../../..`로 먼저 돌아온다.
+`showque`에서 cpu partition과 자원을 확인하고 site 허용 범위에서 실행한다. 에이전트가 제출하지 않는다.
 
 ```bash
 cd ..
-srun --partition=amd_h200nv_8 --nodes=1 --ntasks=1 --gres=gpu:1 \
+srun --partition=cpu --nodes=1 --ntasks=1 \
   --cpus-per-task=8 --mem=48G --time=02:00:00 \
   --comment='field=nlp;appl=pytorch' --pty bash
 ```
@@ -215,18 +221,78 @@ srun --partition=amd_h200nv_8 --nodes=1 --ntasks=1 --gres=gpu:1 \
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate phdq_blt_hf
 cd blt-cache
-python neuron/runtime/blt_hf_checks/check_env.py
+python neuron/bundle.py verify
+df -h .
 ```
 
-최초 ZIP 해제가 목적이면 여기서5절의 unzip 명령만 실행한다.
-해제와 입력 계획 수정까지 끝났으면 아래 변환 명령을 실행한다.
+### 6-1. 문서 및 중복 관계 audit
+
+이미 풀린10폴더를 카탈로그대로 읽어 문서/본문 hash/출처/파일 hash를 SQLite에 기록한다.
+전체 본문을 RAM에 모으지 않고 JSON1파일씩 읽으며 문서 연결 정보만 RAM에 둔다.
+기본으로100GiB 여유 공간을 남기고,입력 파일 크기의2배를 추가 여유로 확인한다.
+SQLite와 파생 JSONL이 모두 본문을 저장하므로 디스크 여유도 필요하다.100GiB는 최대 사용량이 아닌
+최소 여유다. 기본 할당2시간 내 완료 시간은 미측정이며 중단되면 새 audit 버전으로 다시 시작한다.
 
 ```bash
-OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 MKL_NUM_THREADS=8 PYTHONPATH=neuron/runtime \
-    python -m blt_hf.entropy_data \
-    --plan data/korean_cpt/manifests/korean-entropy-v001.json \
-    --output data/korean_cpt/prepared/korean-entropy-v001
-python -m json.tool data/korean_cpt/prepared/korean-entropy-v001/manifest.json
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus audit \
+    --input-root data/korean_cpt/incoming/nikl \
+    --sources neuron/runtime/plan/nikl_sources.json \
+    --output data/korean_cpt/audits/nikl-v001
+python -m json.tool data/korean_cpt/audits/nikl-v001/audit.json
+```
+
+500파일마다 진행 개수를 출력한다. 성공 보고서의 `status=complete`,출처별 files/documents/utf8_bytes,
+`exact_duplicate_documents`, `groups`, `largest_group_unique_documents`를 확인한다.
+예상은10출처110611JSON이지110611문서가 아니다. 큰 그룹이나 source/ID 충돌은 원인을 확인한다.
+실패한 audit에는 성공 표식인 audit.json이 없고 split은 진행하지 않는다.
+
+그룹 연결은 다음 두 기준의 전이적 연결 성분이다.
+
+- 출처가 달라도 동일한 문서 ID.
+- 본문을 비교할 때만 NFC·공백 접기를 적용한 결과가 동일함.
+
+원문 byte hash가 같은 중복은 정렬된 source/파일/문서 순서의 대표1개만 JSONL에 쓰며,
+다른 출처/위치의 별칭은 SQLite에 보존한다. NFC/공백 비교만 같은 서로 다른 원문은 삭제하지 않고
+같은 그룹에 둔다. 같은 ID의 다른 본문도 출처가 다르면 보수적으로 묶는다.
+**퍼지·부분중복을 모두 찾는 검사는 아니다.** 따라서 근접 중복 검토 승인은 자동 설정하지 않는다.
+
+### 6-2. 그룹 단위 split과 JSONL 생성
+
+audit 결과 검토 후에만 실행한다. 아래는 train/validation/test 약98/1/1과 seed42를 선택하는 예시다.
+사용자가 이 비율을 채택할 때 실행하며,다른 비율은 명시적으로 바꾼다. 학습 실행 승인은 아니다.
+그룹 대표 hash와 seed로 split을 정하므로 같은 그룹은 분리되지 않고 재현된다.
+이는 그룹 해시의 기대 비율이지 정확한 문서/바이트 할당량이나 출처별 층화 비율은 아니다.
+
+```bash
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus split \
+    --audit data/korean_cpt/audits/nikl-v001 \
+    --output data/korean_cpt/prepared/korean-entropy-v001 \
+    --validation-percent 1 --test-percent 1 --seed 42
+python -m json.tool data/korean_cpt/prepared/korean-entropy-v001/report.json
+```
+
+split은 hash로 고정한 SQLite 스냅샷만 읽는다. 입력을 변경했다면 새 audit를 만들어야 한다.
+실행 코드/SQLite hash가 바뀌면 기존 audit 재사용을 거부한다. 같은 출력 디렉터리는 재사용하지 않고
+빈 split이면 중단한다. 결과는 `train.jsonl`, `validation.jsonl`, `test.jsonl`, `manifest.json`, `report.json`이다.
+출처별 문서 수와 실제 바이트 수를 검토한다. manifest의 `splits`에는 train/validation만 있고
+test는 `held_out_test`로 별도 보관해 학습에 넘기지 않는다. test는 교사·threshold·후보 선택에 쓰지 않는다.
+
+### 6-3. 작은 보고서 전달
+
+본문이나 ID/화자 실제 값을 포함하지 않는 audit.json/report.json만 검토 후 전달한다.
+`index.sqlite`,JSONL,원본 JSON/ZIP은 Git에 추가하지 않는다. 먼저 audit만 돌렸다면 report 복사는 나중에 한다.
+
+```bash
+mkdir -p runtimelog
+mkdir runtimelog/nikl-prep-v001 &&
+cp -n data/korean_cpt/audits/nikl-v001/audit.json runtimelog/nikl-prep-v001/
+```
+
+split 완료 후 같은 로그 디렉터리에 다음 보고서만 추가한다. 선별 commit/push는11절을 따르되
+대상 경로는 `runtimelog/nikl-prep-v001`을 직접 적는다.
+
+```bash
+cp -n data/korean_cpt/prepared/korean-entropy-v001/report.json runtimelog/nikl-prep-v001/
 ```
 
 작업을 마치면 할당 셸을 종료하고 로그인 셸에서 프로젝트로 돌아온다.
@@ -241,8 +307,7 @@ exit
 cd blt-cache
 ```
 
-출력은 `train.jsonl`, `validation.jsonl`, `manifest.json`이다. exact 중복/hash 검사는 수행하지만
-근접 중복·PII 검토를 대신하지 않는다. 다음2개 값은 검토 완료 후에만 수정한다.
+위 자료 준비는 근접 중복·PII 검토를 대신하지 않는다. 다음2개 값은 검토 완료 후에만 수정한다.
 자료 파일을 바꾸면 기존 hash를 임의로 맞추지 말고 새 데이터 이름으로 다시 준비한다.
 
 ```bash
