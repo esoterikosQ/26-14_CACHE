@@ -231,6 +231,69 @@ class EntropyCorpusContracts(unittest.TestCase):
             self.assertTrue(all(text in texts for text in expected))
             self.assertEqual({path: file_sha256(path) for path in original_hashes}, original_hashes)
 
+    def test_quarantine_empty_documents_preserves_ledger_and_groups(self):
+        import sqlite3
+        from blt_hf.entropy_corpus import audit_corpus, split_corpus
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            incoming, catalog = self.corpus_fixture(root)
+            path = incoming / 'spoken/sample.JSON'
+            payload = json.loads(path.read_text())
+            payload['document'] += [
+                {'id': 'empty-four', 'utterance': [{'form': ''} for _ in range(4)]},
+                {'id': 'whitespace', 'utterance': [{'form': ' \t'}, {'form': ''}]},
+                {'id': 'empty-alias', 'utterance': [{'form': ''} for _ in range(4)]}]
+            path.write_text(json.dumps(payload))
+            original_hash = file_sha256(path)
+            with self.assertRaisesRegex(ValueError, 'Empty or whitespace-only document'):
+                audit_corpus(incoming, catalog, root / 'strict', min_free_bytes=0)
+            report = audit_corpus(incoming, catalog, root / 'audit', min_free_bytes=0,
+                                  empty_document_policy='quarantine')
+            self.assertEqual(report['input_documents'], 128)
+            self.assertEqual(report['usable_documents'], 125)
+            self.assertEqual(report['quarantined_documents'], 3)
+            self.assertEqual(report['quarantined_utf8_bytes'], 9)
+            self.assertEqual(report['groups'], 121)
+            self.assertEqual(report['unique_exact_documents'], 123)
+            self.assertEqual(report['exact_duplicate_documents'], 2)
+            self.assertEqual(report['empty_document_policy'], 'quarantine')
+            source = report['sources']['spoken']
+            self.assertEqual(source['documents'], 66)
+            self.assertEqual(source['usable_documents'], 63)
+            self.assertEqual(source['quarantined_documents'], 3)
+            self.assertEqual(source['empty_form_parts'], 9)
+            with sqlite3.connect(root / 'audit/index.sqlite') as connection:
+                rows = connection.execute('SELECT document_id, text, file_path, position, reason '
+                                          'FROM quarantine ORDER BY position').fetchall()
+            self.assertEqual([row[0] for row in rows], ['empty-four', 'whitespace', 'empty-alias'])
+            self.assertEqual([row[1] for row in rows], ['\n\n\n', ' \t\n', '\n\n\n'])
+            self.assertTrue(all(row[2] == 'spoken/sample.JSON' and row[3] >= 63 and row[4] for row in rows))
+            result = split_corpus(root / 'audit', root / 'prepared', 20, 20, 42, min_free_bytes=0)
+            self.assertEqual(result['documents'], 123)
+            self.assertEqual(result['quarantined_documents'], 3)
+            manifest = json.loads((root / 'prepared/manifest.json').read_text())
+            self.assertEqual(manifest['empty_document_policy'], 'quarantine')
+            self.assertEqual(manifest['quarantined_documents'], 3)
+            for split in ('train', 'validation', 'test'):
+                records = [json.loads(line) for line in (root / f'prepared/{split}.jsonl').read_text().splitlines()]
+                self.assertTrue(all(record['text'].strip() for record in records))
+            self.assertEqual(file_sha256(path), original_hash)
+            path.write_text(json.dumps({'document': [
+                {'id': 'clash', 'utterance': [{'form': ''}]},
+                {'id': 'clash', 'utterance': [{'form': 'different'}]}]}))
+            with self.assertRaisesRegex(ValueError, 'Conflicting document identity'):
+                audit_corpus(incoming, catalog, root / 'conflict-empty', min_free_bytes=0,
+                             empty_document_policy='quarantine')
+            for number, bad_part in enumerate(({}, {'form': None}, {'form': 1})):
+                path.write_text(json.dumps({'document': [
+                    {'id': 'bad-form', 'utterance': [bad_part]}]}))
+                with self.assertRaisesRegex(ValueError, 'Expected form string'):
+                    audit_corpus(incoming, catalog, root / f'bad-form-{number}', min_free_bytes=0,
+                                 empty_document_policy='quarantine')
+            with self.assertRaisesRegex(ValueError, 'Empty document policy'):
+                audit_corpus(incoming, catalog, root / 'bad-policy', min_free_bytes=0,
+                             empty_document_policy='skip')
+
     def test_corpus_fails_closed_on_conflicting_identity_and_bad_schema(self):
         from blt_hf.entropy_corpus import audit_corpus
         with tempfile.TemporaryDirectory() as directory:

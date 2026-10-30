@@ -198,7 +198,10 @@ unzip -n data/korean_cpt/incoming/nikl/CORPUS.zip \
 모든 `document[]`를 읽고 form을 LF로 연결한다. JSONL은 한 행에 문서1개와 `id`, `source`, `text`를 쓴다.
 문서 내부의 빈 문자열 form은 삭제하지 않고 LF 구분자까지 보존하며 출처별 `empty_form_parts`로 집계한다.
 UTF-8 본문은 정규화하거나 자르지 않는다. 단일 JSON512MiB 초과/JSONL 한 행16MiB 초과,
-문서 전체가 비거나 공백뿐인 경우/누락·비문자열 form/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 중단한다.
+누락·비문자열 form/잘못된 schema/같은 source·ID의 다른 본문/심볼릭 링크는 중단한다.
+문서 전체가 비거나 공백뿐인 경우도 기본은 중단한다. 아래 audit의 명시적
+`--empty-document-policy quarantine`에서만 해당 문서의 LF 연결 본문·출처·ID·파일 위치·사유를
+private SQLite의 `quarantine` 원장에 보존하고 학습 파생 JSONL에서 제외한다. 원본은 변경하지 않는다.
 구조 오류는 원문 값 대신 발화·문단 위치와 자료형을 표시한다. original_form으로 자동 대체하지 않는다.
 실패한 부분 산출물도 보존하며 새 버전 디렉터리로 다시 실행한다.
 
@@ -218,8 +221,11 @@ df -h .
 ### 6-1. 문서 및 중복 관계 audit
 
 2026-10-30 사용자 실행의 nikl-v001은 첫 출처의 form 검사에서 실패했다. 실패 디렉터리는
-삭제하거나 재사용하지 않는다. 코드 갱신 후 아래처럼 새 nikl-v002에서 처음부터 읽는다.
-자동 재개 기능은 없으며 원본 JSON은 수정하지 않는다. 아래 split과 보고서 복사도 같은 audit를 가리킨다.
+삭제하거나 재사용하지 않는다. 후속 nikl-v002는 마지막 heartbeat87000파일/114244문서 이후
+SPOKEN 문서의 발화4개가 모두 빈 문자열인 경우에 중단됐다. 코드 갱신 후 아래처럼 새 nikl-v003에서
+내용 없는 문서의 명시적 격리 정책으로 처음부터 읽는다. 기존 부분 DB에 검증 가능한 재개
+체크포인트가 없어 자동 재개하지 않는다. v001/v002와 원본은 보존한다.
+아래 split과 보고서 복사도 같은 v003 audit를 가리킨다.
 
 이미 풀린10폴더를 카탈로그대로 읽어 문서/본문 hash/출처/파일 hash를 SQLite에 기록한다.
 전체 본문을 RAM에 모으지 않고 JSON1파일씩 읽으며 문서 연결 정보만 RAM에 둔다.
@@ -231,13 +237,19 @@ SQLite와 파생 JSONL이 모두 본문을 저장하므로 디스크 여유도 �
 PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus audit \
     --input-root data/korean_cpt/incoming/nikl \
     --sources neuron/runtime/plan/nikl_sources.json \
-    --output data/korean_cpt/audits/nikl-v002
-python -m json.tool data/korean_cpt/audits/nikl-v002/audit.json
+    --output data/korean_cpt/audits/nikl-v003 \
+    --empty-document-policy quarantine
+python -m json.tool data/korean_cpt/audits/nikl-v003/audit.json
 ```
 
 500파일마다 진행 개수를 출력한다. 성공 보고서의 `status=complete`,출처별 files/documents/utf8_bytes,
-`empty_form_parts`를 확인한다. 빈 form 허용은 문서/발화 제외나 본문 대체가 아니다.
+`empty_form_parts`와 `empty_document_policy=quarantine`을 확인한다. 일부 form만 빈 문서는 LF까지 그대로 쓴다.
+`input_documents`에는 격리 문서도 포함하고 `usable_documents`에는 격리되지 않은 문서만 센다.
+전체 및 출처별 `quarantined_documents`, `quarantined_utf8_bytes`를 검토한다.
+빈 form4개의 LF 연결 본문도3bytes이므로 격리 바이트가 반드시0인 것은 아니다.
+격리 문서는 본문/ID 중복 연결과 대표 선택에 포함하지 않는다. 원문과 격리 원장은 보존한다.
 `exact_duplicate_documents`, `groups`, `largest_group_unique_documents`를 확인한다.
+중복·그룹 수는 격리되지 않은 문서 기준이며 같은 source/ID의 다른 본문 검사는 격리 원장에도 적용한다.
 예상은10출처110611JSON이지110611문서가 아니다. 큰 그룹이나 source/ID 충돌은 원인을 확인한다.
 실패한 audit에는 성공 표식인 audit.json이 없고 split은 진행하지 않는다.
 
@@ -260,7 +272,7 @@ audit 결과 검토 후에만 실행한다. 아래는 train/validation/test 약9
 
 ```bash
 PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_corpus split \
-    --audit data/korean_cpt/audits/nikl-v002 \
+    --audit data/korean_cpt/audits/nikl-v003 \
     --output data/korean_cpt/prepared/korean-entropy-v001 \
     --validation-percent 1 --test-percent 1 --seed 42
 python -m json.tool data/korean_cpt/prepared/korean-entropy-v001/report.json
@@ -271,6 +283,7 @@ split은 hash로 고정한 SQLite 스냅샷만 읽는다. 입력을 변경했다
 빈 split이면 중단한다. 결과는 `train.jsonl`, `validation.jsonl`, `test.jsonl`, `manifest.json`, `report.json`이다.
 출처별 문서 수와 실제 바이트 수를 검토한다. manifest의 `splits`에는 train/validation만 있고
 test는 `held_out_test`로 별도 보관해 학습에 넘기지 않는다. test는 교사·threshold·후보 선택에 쓰지 않는다.
+manifest와 report에도 `empty_document_policy`, `quarantined_documents`가 고정된다.
 
 ### 6-3. 작은 보고서 전달
 
@@ -280,7 +293,7 @@ test는 `held_out_test`로 별도 보관해 학습에 넘기지 않는다. test�
 ```bash
 mkdir -p runtimelog
 mkdir runtimelog/nikl-prep-v001 &&
-cp -n data/korean_cpt/audits/nikl-v002/audit.json runtimelog/nikl-prep-v001/
+cp -n data/korean_cpt/audits/nikl-v003/audit.json runtimelog/nikl-prep-v001/
 ```
 
 split 완료 후 같은 로그 디렉터리에 다음 보고서만 추가한다. 선별 commit/push는11절을 따르되

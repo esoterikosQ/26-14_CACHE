@@ -40,7 +40,10 @@ def _find(parents, number):
     return number
 
 
-def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES):
+def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES, *,
+                 empty_document_policy='error'):
+    if empty_document_policy not in ('error', 'quarantine'):
+        raise ValueError('Empty document policy must be error or quarantine')
     input_root, sources_path, output = (Path(path).resolve() for path in (input_root, sources_path, output))
     if output.is_relative_to(input_root):
         raise ValueError('Audit output must be outside input root')
@@ -74,6 +77,10 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
             CREATE INDEX identities ON records(source, document_id);
             CREATE INDEX exact_text ON records(exact_sha);
             CREATE TABLE links(kind TEXT, token TEXT, owner INTEGER, PRIMARY KEY(kind, token));
+            CREATE TABLE quarantine(source TEXT, document_id TEXT, text TEXT, exact_sha TEXT,
+                                    file_path TEXT, position INTEGER, parts INTEGER, empty_form_parts INTEGER,
+                                    reason TEXT, PRIMARY KEY(file_path, position));
+            CREATE INDEX quarantine_identity ON quarantine(source, document_id);
         ''')
         for spec in sorted(sources, key=lambda value: value['source']):
             folder = input_root / spec['directory']
@@ -86,7 +93,8 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                 raise ValueError(f'No JSON files in source: {spec["source"]}')
             if 'expected_files' in spec and len(paths) != spec['expected_files']:
                 raise ValueError(f'Source file count mismatch: {spec["source"]}')
-            counts = {'files': 0, 'documents': 0, 'utf8_bytes': 0, 'empty_form_parts': 0}
+            counts = {'files': 0, 'documents': 0, 'utf8_bytes': 0, 'empty_form_parts': 0,
+                      'usable_documents': 0, 'quarantined_documents': 0, 'quarantined_utf8_bytes': 0}
             source_counts[spec['source']] = counts
             for path in paths:
                 if path.is_symlink() or not path.resolve().is_relative_to(folder.resolve()):
@@ -119,17 +127,29 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                     empty_parts = sum(part['form'] == '' for part in parts)
                     text = '\n'.join(part['form'] for part in parts)
                     normalized = ' '.join(unicodedata.normalize('NFC', text).split())
-                    if not normalized:
+                    if not normalized and empty_document_policy == 'error':
                         raise ValueError(f'Empty or whitespace-only document: {relative}:{position} '
                                          f'{field}_parts={len(parts)} empty_form_parts={empty_parts}')
                     row = {'id': document['id'], 'source': spec['source'], 'text': text}
                     if len((json.dumps(row, ensure_ascii=False) + '\n').encode('utf-8')) > MAX_RECORD_BYTES:
                         raise ValueError(f'Record exceeds 16MiB: {relative}:{position}')
                     exact_sha = _digest(text)
-                    previous = connection.execute('SELECT exact_sha FROM records WHERE source=? AND document_id=? LIMIT 1',
-                                                  (spec['source'], document['id'])).fetchone()
+                    previous = connection.execute('''SELECT exact_sha FROM records WHERE source=? AND document_id=?
+                                                     UNION ALL SELECT exact_sha FROM quarantine
+                                                     WHERE source=? AND document_id=? LIMIT 1''',
+                                                  (spec['source'], document['id'], spec['source'], document['id'])).fetchone()
                     if previous and previous[0] != exact_sha:
                         raise ValueError(f'Conflicting document identity: {relative}:{position}')
+                    counts['documents'] += 1
+                    counts['utf8_bytes'] += len(text.encode('utf-8'))
+                    counts['empty_form_parts'] += empty_parts
+                    if not normalized:
+                        connection.execute('INSERT INTO quarantine VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                                           (spec['source'], document['id'], text, exact_sha, relative,
+                                            position, len(parts), empty_parts, 'no_non_whitespace_form_text'))
+                        counts['quarantined_documents'] += 1
+                        counts['quarantined_utf8_bytes'] += len(text.encode('utf-8'))
+                        continue
                     number = len(parents)
                     parents.append(number)
                     connection.execute('INSERT INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -143,14 +163,14 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                             normalized_links += kind == 'normalized'
                         else:
                             connection.execute('INSERT INTO links VALUES (?, ?, ?)', (kind, token, number))
-                    counts['documents'] += 1
-                    counts['utf8_bytes'] += len(text.encode('utf-8'))
-                    counts['empty_form_parts'] += empty_parts
+                    counts['usable_documents'] += 1
                 counts['files'] += 1
                 file_count += 1
                 connection.commit()
                 if file_count % 500 == 0:
-                    print(json.dumps({'stage': 'audit', 'files': file_count, 'documents': len(parents)}), flush=True)
+                    print(json.dumps({'stage': 'audit', 'files': file_count,
+                                      'documents': sum(item['documents'] for item in source_counts.values()),
+                                      'quarantined_documents': sum(item['quarantined_documents'] for item in source_counts.values())}), flush=True)
         group_keys = {}
         for number, exact_sha in connection.execute('SELECT number, exact_sha FROM records'):
             group = _find(parents, number)
@@ -159,12 +179,17 @@ def audit_corpus(input_root, sources_path, output, min_free_bytes=MIN_FREE_BYTES
                                ((group_keys[_find(parents, number)], number) for number in range(len(parents))))
         connection.execute('CREATE INDEX group_lookup ON records(group_id)')
         unique = connection.execute('SELECT COUNT(DISTINCT exact_sha) FROM records').fetchone()[0]
-        largest = connection.execute('SELECT MAX(size) FROM (SELECT COUNT(DISTINCT exact_sha) AS size FROM records GROUP BY group_id)').fetchone()[0]
+        largest = connection.execute('SELECT MAX(size) FROM (SELECT COUNT(DISTINCT exact_sha) AS size FROM records GROUP BY group_id)').fetchone()[0] or 0
     _space(output, min_free_bytes)
     report = {'schema_version': 1, 'status': 'complete', 'group_policy': GROUP_POLICY,
               'code_sha256': file_sha256(Path(__file__)), 'catalog_sha256': file_sha256(sources_path),
               'index_sha256': file_sha256(database), 'sources': source_counts,
-              'excluded_directories': excluded, 'files': file_count, 'input_documents': len(parents),
+              'excluded_directories': excluded, 'files': file_count,
+              'input_documents': sum(item['documents'] for item in source_counts.values()),
+              'usable_documents': len(parents), 'empty_document_policy': empty_document_policy,
+              'quarantined_documents': sum(item['quarantined_documents'] for item in source_counts.values()),
+              'quarantined_utf8_bytes': sum(item['quarantined_utf8_bytes'] for item in source_counts.values()),
+              'quarantine_ledger': 'index.sqlite:quarantine',
               'unique_exact_documents': unique, 'exact_duplicate_documents': len(parents) - unique,
               'groups': len(group_keys), 'largest_group_unique_documents': largest,
               'identity_links': identity_links, 'normalized_links': normalized_links,
@@ -227,6 +252,8 @@ def split_corpus(audit, output, validation_percent, test_percent, seed, min_free
               'exact_duplicates': 'One representative in sorted source/file/document order; aliases retained in audit index'}
     manifest = {'schema_version': 1, 'source_audit_sha256': file_sha256(audit / 'audit.json'),
                 'audit_index_sha256': report['index_sha256'], 'group_policy': GROUP_POLICY,
+                'empty_document_policy': report['empty_document_policy'],
+                'quarantined_documents': report['quarantined_documents'],
                 'split_policy': policy, 'pii_review_approved': False,
                 'near_duplicate_split_review_approved': False,
                 'preprocessing': 'form fields joined by LF; no Unicode normalization of output text',
@@ -235,6 +262,8 @@ def split_corpus(audit, output, validation_percent, test_percent, seed, min_free
     _write_json(output / 'manifest.json', manifest)
     inspect_dataset(output / 'manifest.json')
     result = {'schema_version': 1, 'status': 'complete', 'documents': sum(item['documents'] for item in summaries.values()),
+              'empty_document_policy': report['empty_document_policy'],
+              'quarantined_documents': report['quarantined_documents'],
               'splits': summaries, 'policy': policy, 'manifest_sha256': file_sha256(output / 'manifest.json'),
               'limitations': report['limitations']}
     _write_json(output / 'report.json', result)
@@ -247,6 +276,8 @@ def main():
     audit_parser = commands.add_parser('audit')
     audit_parser.add_argument('--input-root', required=True)
     audit_parser.add_argument('--sources', required=True)
+    audit_parser.add_argument('--empty-document-policy', choices=('error', 'quarantine'), default='error',
+                              help='Explicitly preserve contentless documents in a private ledger, not training JSONL')
     split_parser = commands.add_parser('split')
     split_parser.add_argument('--audit', required=True)
     split_parser.add_argument('--validation-percent', required=True, type=float)
@@ -257,7 +288,8 @@ def main():
         command.add_argument('--min-free-gib', type=int, default=100)
     args = parser.parse_args()
     if args.command == 'audit':
-        result = audit_corpus(args.input_root, args.sources, args.output, args.min_free_gib * 1024**3)
+        result = audit_corpus(args.input_root, args.sources, args.output, args.min_free_gib * 1024**3,
+                      empty_document_policy=args.empty_document_policy)
     else:
         result = split_corpus(args.audit, args.output, args.validation_percent, args.test_percent,
                               args.seed, args.min_free_gib * 1024**3)
