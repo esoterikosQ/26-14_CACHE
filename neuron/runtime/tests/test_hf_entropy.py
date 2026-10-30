@@ -3,6 +3,7 @@ from pathlib import Path
 import signal
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from blt_hf.entropy_data import byte_examples, file_sha256, inspect_dataset, prepare
 
@@ -85,9 +86,31 @@ class EntropyDataContracts(unittest.TestCase):
             report = prepare(plan_path, root / 'accepted')
             self.assertEqual(report['train']['documents'], 1)
             manifest = json.loads((root / 'accepted/manifest.json').read_text())
-            self.assertIs(manifest['license_approved'], False)
+            self.assertNotIn('license_approved', manifest)
+            self.assertIs(manifest['pii_review_approved'], False)
+            self.assertIs(manifest['near_duplicate_split_review_approved'], False)
             with self.assertRaises(FileExistsError):
                 prepare(plan_path, root / 'accepted')
+
+    def test_preflight_requires_privacy_and_split_review_only(self):
+        from blt_hf.entropy_train import preflight
+        config = json.loads((Path(__file__).resolve().parents[1] /
+                             'plan/korean_entropy_preparation.json').read_text())
+        config.update(training_authorized=True, dataset_manifest='synthetic-manifest.json',
+                      max_steps=4, max_train_bytes=100, max_seconds=100,
+                      max_run_bytes=100, max_gpu_memory_bytes=100)
+        with tempfile.TemporaryDirectory() as directory:
+            config['model_path'] = directory
+            (Path(directory) / 'model.safetensors').touch()
+            manifest = {'pii_review_approved': True, 'near_duplicate_split_review_approved': True}
+            with patch('blt_hf.entropy_train.inspect_dataset', return_value=(manifest, {})):
+                self.assertIs(preflight(config)['training_ready'], True)
+                for key in tuple(manifest):
+                    manifest[key] = False
+                    report = preflight(config)
+                    self.assertIs(report['training_ready'], False)
+                    self.assertEqual(report['blockers'], [f'dataset {key} required'])
+                    manifest[key] = True
 
     def test_preflight_stays_blocked_without_data_and_budgets(self):
         from blt_hf.entropy_train import preflight

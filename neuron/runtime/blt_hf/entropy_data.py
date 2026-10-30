@@ -116,7 +116,7 @@ def prepare(plan_path, output):
                         raise ValueError('Source identity mismatch')
                     destination.write(json.dumps(record, ensure_ascii=False) + '\n')
     manifest = {'schema_version': 1, 'source_plan_sha256': file_sha256(plan_path),
-                'license_approved': False, 'pii_review_approved': False,
+                'pii_review_approved': False,
                 'near_duplicate_split_review_approved': False,
                 'preprocessing': 'No Unicode normalization; NIKL form fields joined by LF; no speaker metadata',
                 'source_files': provenance,

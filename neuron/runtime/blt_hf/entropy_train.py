@@ -142,7 +142,7 @@ def preflight(config):
         blockers.append('dataset_manifest missing; corpus has not been ingested')
     else:
         manifest, summary = inspect_dataset(config['dataset_manifest'])
-        for key in ('license_approved', 'pii_review_approved', 'near_duplicate_split_review_approved'):
+        for key in ('pii_review_approved', 'near_duplicate_split_review_approved'):
             if manifest.get(key) is not True:
                 blockers.append(f'dataset {key} required')
     if config.get('checkpoint_revision') != 'f2aae511e44e2086b1204bc4ddec6ac6c9651332':
