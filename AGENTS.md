@@ -1,5 +1,27 @@
 # Work on the standalone BLT cache
 
+## Python environment (mandatory)
+
+- Use the existing conda environment `phdq_blt_hf` for all Python project
+	execution, including corpus preparation/downloads, audits, count experiments,
+	tests, inference, and training. This is the configured project environment,
+	not an optional recommendation.
+- Before running Python, verify the selected interpreter and conda environment.
+	Use Python from activated `phdq_blt_hf` or `conda run -n phdq_blt_hf`.
+	If it is unavailable on a host, report the blocker; do not silently use
+	system Python, conda base, or another environment.
+- Do not create or use venv/virtualenv environments, including `python -m venv`,
+	`uv venv`, repository-local `.venv`, or per-run `model-venv` overlays.
+- Check dependencies in `phdq_blt_hf` first. Missing dependencies are not a
+	reason to create a replacement environment or reinstall/upgrade pinned
+	packages without approval.
+- If a separate environment is genuinely necessary, explain why and obtain
+	explicit user approval before creating it. New environments must also use
+	conda; venv/virtualenv remain prohibited.
+- Preserve existing environments and running jobs. Do not delete old
+	environments, migrate active jobs, or change dependencies under running jobs
+	without explicit approval. Neuron execution remains user-only.
+
 Read `docs/HANDOFF.md` and `docs/PLAN.md` before implementation. For cache
 invalidation or decoder work, also read `docs/DESIGN_HISTORY.md`.
 

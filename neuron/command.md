@@ -52,15 +52,19 @@ git rev-parse HEAD
 
 기존 clone은 사용하는 job이 모두 끝난 뒤 갱신한다. `git status --short`에 변경이 있으면
 먼저 보존하며 강제 checkout은 하지 않는다. 이전 안내로 detached HEAD라면 그 상태에서도
-아래 merge는 현재 커밋을 보존한다. 로그 push는 현재 HEAD를 지정하므로 오래된 로컬 main을 올리지 않는다.
-충돌이 나면 중단하고 충돌 내용을 확인한다. 예전 a0cfa52는 새 실행에 사용하지 않는다.
+아래 merge --ff-only는 현재 커밋을 보존한 채 갱신할 수 있다. 인자 없는 git pull --ff-only는
+detached HEAD에서 upstream을 결정하지 못하므로 사용하지 않는다. 로그 push는 현재 HEAD를
+지정하므로 오래된 로컬 main을 올리지 않는다. fast-forward 불가/로컬 변경 충돌이면 중단하고
+현재 이력을 보존한다. 강제 reset/checkout이나 임의 merge commit을 만들지 않는다.
+예전 a0cfa52는 새 실행에 사용하지 않는다.
 
 ```bash
 git status --short
 git sparse-checkout add neuron runtimelog
 git fetch origin
-git merge --no-edit origin/main
+git merge --ff-only origin/main
 git rev-parse HEAD
+python neuron/bundle.py verify
 ```
 
 ## 3. 매 로그인 시 환경과 디렉터리
@@ -322,16 +326,20 @@ vi data/korean_cpt/prepared/korean-entropy-v001/manifest.json
 공식 `kor_Hang/test`는 catalog에서 보류하고 내려받지 않는다. 전체 원문 선택은 학습
 노출량이나75/15/10 replay 혼합 비율 승인과 다르다. 임의로 자료를 잘라 예산을 맞추지 않는다.
 
-이번 변경이 반영된 코드에서 bundle verify를 먼저 실행한다. PyArrow26.0.0을 사용한다.
-사용자가 별도 `data/korean_cpt/environments/fineweb-pyarrow`에만 설치하며
-기존 `phdq_blt_hf` 환경/실행 중 작업은 변경하지 않는다. 준비 환경도 Git에 넣지 않는다.
+기존 conda `phdq_blt_hf`에서 자료 준비/다운로드/통합을 모두 실행한다. 이미 활성화돼
+있으면 activate는 생략한다. interpreter 경로와 PyArrow 설치 상태/버전을 먼저 확인한다
+(합성 Parquet 검사에 사용한 버전은26.0.0). venv나 별도 준비 환경을 만들지 않고
+패키지를 자동 설치/업그레이드하지 않는다. 의존성이 없거나 호환되지 않으면 중단하고
+기존 환경의 고정 버전 및 실행 중 작업 영향을 확인한 뒤 사용자 승인을 받는다.
+이번 변경이 반영된 코드에서 bundle verify를 실행한다.
 NIKL audit nikl-v003와 prepared korean-entropy-v001은 그대로 보존한다.
 
 ```bash
+conda activate phdq_blt_hf &&
+command -v python &&
+python -c 'import sys, pyarrow; print(sys.executable); print("pyarrow", pyarrow.__version__)' &&
 python neuron/bundle.py verify &&
-if [[ ! -e data/korean_cpt/environments/fineweb-pyarrow ]]; then python -m venv data/korean_cpt/environments/fineweb-pyarrow; fi &&
-data/korean_cpt/environments/fineweb-pyarrow/bin/python -m pip install 'pyarrow==26.0.0' &&
-PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb catalog \
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_fineweb catalog \
     --output data/korean_cpt/manifests/fineweb2-kor-full-v001.json
 ```
 
@@ -340,7 +348,7 @@ catalog는 공개 API의 고정 경로/크기/LFS SHA256을 검증해 새 파일
 
 ```bash
 OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
-PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb download \
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_fineweb download \
     --catalog data/korean_cpt/manifests/fineweb2-kor-full-v001.json \
     --output data/korean_cpt/incoming/fineweb2/full-v001 \
     --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48
@@ -357,7 +365,7 @@ download의 `report.json`에서 `status=complete`와25shard를 확인한다. 중
 
 ```bash
 OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
-PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb download \
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_fineweb download \
     --catalog data/korean_cpt/manifests/fineweb2-kor-full-v001.json \
     --output data/korean_cpt/incoming/fineweb2/full-v001 \
     --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48 --resume
@@ -369,7 +377,7 @@ train/validation/test를 재배정하지 않는다. 이 단계는 새 디렉터�
 
 ```bash
 OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
-PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb combine \
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_fineweb combine \
     --nikl-audit data/korean_cpt/audits/nikl-v003 \
     --nikl-manifest data/korean_cpt/prepared/korean-entropy-v001/manifest.json \
     --fineweb-report data/korean_cpt/incoming/fineweb2/full-v001/report.json \
