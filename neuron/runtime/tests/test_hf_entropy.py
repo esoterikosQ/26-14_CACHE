@@ -354,6 +354,152 @@ class EntropyCorpusContracts(unittest.TestCase):
                 split_corpus(root / 'audit', root / 'tampered', 20, 20, 42, min_free_bytes=0)
 
 
+class FineWebCorpusContracts(unittest.TestCase):
+    def test_real_parquet_conversion_and_download_resume(self):
+        try:
+            import pyarrow as arrow
+            import pyarrow.parquet as parquet
+        except ImportError:
+            self.skipTest('Real Parquet test runs in the existing preparation environment')
+        import hashlib
+        from io import BytesIO
+        from blt_hf.entropy_fineweb import catalog_from_tree, download_corpus, _json_rows
+        rows = [{'id': 'first', 'text': 'Original e\u0301\ntext'}, {'id': 'empty', 'text': '\n'}]
+        buffer = BytesIO()
+        parquet.write_table(arrow.Table.from_pylist(rows), buffer)
+        payload = buffer.getvalue()
+        class Response(BytesIO):
+            status = 200
+            headers = {}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = catalog_from_tree([
+                {'type': 'file', 'path': f'data/kor_Hang/train/{number:03d}.parquet', 'size': len(payload),
+                 'lfs': {'oid': hashlib.sha256(payload).hexdigest(), 'size': len(payload)}} for number in range(25)])
+            (root / 'catalog.json').write_text(json.dumps(catalog))
+            with patch('blt_hf.entropy_fineweb.urlopen', side_effect=[Response(payload), OSError('synthetic interruption')]):
+                with self.assertRaises(OSError):
+                    download_corpus(root / 'catalog.json', root / 'download', 10**9, 0)
+            first_hash = file_sha256(root / 'download/documents/000.jsonl.gz')
+            with patch('blt_hf.entropy_fineweb.urlopen', side_effect=lambda *args, **kwargs: Response(payload)) as request:
+                report = download_corpus(root / 'catalog.json', root / 'download', 10**9, 0, resume=True)
+                self.assertEqual(request.call_count, 24)
+            self.assertEqual(report['documents'], 50)
+            self.assertEqual(len(report['shards']), 25)
+            self.assertEqual(file_sha256(root / 'download/documents/000.jsonl.gz'), first_hash)
+            self.assertEqual([row['text'] for row in _json_rows(root / 'download/documents/000.jsonl.gz')],
+                             [row['text'] for row in rows])
+            self.assertTrue(report['original_parquet_preserved'])
+            self.assertFalse(report['pii_review_approved'])
+            with self.assertRaisesRegex(ValueError, 'identity changed'):
+                download_corpus(root / 'catalog.json', root / 'download', 10**9 + 1, 0, resume=True)
+
+    def test_combined_corpus_preserves_nikl_roles_and_original_bytes(self):
+        import gzip
+        from blt_hf import entropy_fineweb as module
+        from blt_hf.entropy_corpus import audit_corpus, split_corpus
+        from blt_hf.entropy_fineweb import catalog_from_tree, combine_corpora, SOURCE, REVISION, REPOSITORY, OFFICIAL_TEST
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            incoming, catalog_path = EntropyCorpusContracts().corpus_fixture(root)
+            audit = root / 'audit'
+            audit_corpus(incoming, catalog_path, audit, min_free_bytes=0)
+            split_corpus(audit, root / 'nikl', 20, 20, 42, min_free_bytes=0)
+            original_hash = file_sha256(audit / 'index.sqlite')
+            original = {split: list(module._json_rows(root / f'nikl/{split}.jsonl'))
+                        for split in ('train', 'validation', 'test')}
+            protected = original['test'][0]
+            fineweb = root / 'fineweb'
+            fineweb.mkdir()
+            tree = [{'type': 'file', 'path': f'data/kor_Hang/train/{number:03d}.parquet',
+                     'size': 100, 'lfs': {'oid': 'a' * 64, 'size': 100}} for number in range(25)]
+            catalog = catalog_from_tree(tree)
+            (fineweb / 'catalog.json').write_text(json.dumps(catalog))
+            shards = []
+            for number, spec in enumerate(catalog['train_shards']):
+                rows = [{'id': f'web-{number}', 'source': SOURCE, 'text': f'web unique {number} e\u0301\n'}]
+                if number == 0:
+                    rows += [{'id': 'exact-copy', 'source': SOURCE, 'text': protected['text']},
+                             {'id': 'normalized-copy', 'source': SOURCE, 'text': '  ' + protected['text'] + '  '},
+                             {'id': 'empty', 'source': SOURCE, 'text': '\n'}]
+                path = fineweb / f'{number:03d}.jsonl.gz'
+                with gzip.open(path, 'wt') as handle:
+                    for row in rows:
+                        handle.write(json.dumps(row) + '\n')
+                shards.append({'source': spec, 'path': path.name, 'sha256': file_sha256(path),
+                               'documents': len(rows), 'utf8_bytes': sum(len(row['text'].encode('utf-8')) for row in rows)})
+            report = {'status': 'complete', 'revision': REVISION, 'repository': REPOSITORY, 'configuration': 'kor_Hang',
+                      'reserved_official_test': [OFFICIAL_TEST], 'shards': shards,
+                      'identity': {'catalog_sha256': file_sha256(fineweb / 'catalog.json'), 'code_sha256': file_sha256(module.__file__)}}
+            (fineweb / 'report.json').write_text(json.dumps(report))
+            result = combine_corpora(audit, root / 'nikl/manifest.json', fineweb / 'report.json', root / 'combined', 10**9, 0)
+            self.assertTrue(result['nikl_original_roles_preserved'])
+            self.assertEqual(result['quarantined_documents'], 1)
+            self.assertEqual(result['quarantined_utf8_bytes'], 1)
+            self.assertEqual(file_sha256(audit / 'index.sqlite'), original_hash)
+            for split in original:
+                rows = list(module._json_rows(root / f'combined/{split}.jsonl'))
+                self.assertEqual([row for row in rows if row['source'] != SOURCE], sorted(original[split], key=lambda row: module._digest(row['text'])))
+                if split == 'test':
+                    self.assertIn('  ' + protected['text'] + '  ', [row['text'] for row in rows])
+                else:
+                    self.assertNotIn('  ' + protected['text'] + '  ', [row['text'] for row in rows])
+            manifest = json.loads((root / 'combined/manifest.json').read_text())
+            self.assertEqual(set(manifest['splits']), {'train', 'validation'})
+            self.assertIn('held_out_test', manifest)
+            self.assertFalse(manifest['pii_review_approved'])
+            self.assertFalse(manifest['near_duplicate_split_review_approved'])
+            with self.assertRaises(FileExistsError):
+                combine_corpora(audit, root / 'nikl/manifest.json', fineweb / 'report.json', root / 'combined', 10**9, 0)
+            with self.assertRaisesRegex(ValueError, 'bridges'):
+                module._join_groups([0, 1, 2], {0: 'train', 1: 'test'}, 2, [0, 1])
+
+    def test_download_sha_range_and_preservation(self):
+        import hashlib
+        from io import BytesIO
+        from unittest.mock import patch
+        from blt_hf.entropy_fineweb import DiskBudget, _download_shard
+        payload = b'pinned synthetic bytes'
+        spec = {'path': 'data/kor_Hang/train/fixture.parquet', 'size_bytes': len(payload),
+                'sha256': hashlib.sha256(payload).hexdigest()}
+        class Response(BytesIO):
+            status = 206
+            headers = {'Content-Range': f'bytes 3-{len(payload) - 1}/{len(payload)}'}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            partial = root / 'fixture.parquet.partial'
+            partial.write_bytes(payload[:3])
+            with patch('blt_hf.entropy_fineweb.urlopen', return_value=Response(payload[3:])) as request:
+                result = _download_shard(spec, root, DiskBudget([root], 1000, 0))
+                self.assertEqual(request.call_args.args[0].headers['Range'], 'bytes=3-')
+            self.assertEqual(result.read_bytes(), payload)
+            with patch('blt_hf.entropy_fineweb.urlopen') as request:
+                self.assertEqual(_download_shard(spec, root, DiskBudget([root], 1000, 0)), result)
+                request.assert_not_called()
+            with self.assertRaises(ValueError):
+                _download_shard({**spec, 'sha256': '0' * 64}, root, DiskBudget([root], 1000, 0))
+            self.assertEqual(result.read_bytes(), payload)
+            with self.assertRaises(ValueError):
+                _download_shard({**spec, 'path': 'data/kor_Hang/test/fixture.parquet'}, root, DiskBudget([root], 1000, 0))
+            with self.assertRaises(ValueError):
+                DiskBudget([root], 1, 0).check()
+
+    def test_pinned_catalog_excludes_official_test_and_rejects_unhashed_files(self):
+        from blt_hf.entropy_fineweb import catalog_from_tree
+        entries = [{'type': 'file', 'path': f'data/kor_Hang/train/{number:03d}.parquet',
+                    'size': 100, 'lfs': {'oid': 'a' * 64, 'size': 100}}
+                   for number in range(25)]
+        entries.append({'type': 'file', 'path': 'data/kor_Hang/test/000_00000.parquet',
+                        'size': 200, 'lfs': {'oid': 'b' * 64, 'size': 200}})
+        catalog = catalog_from_tree(entries)
+        self.assertEqual(catalog['revision'], 'af9c13333eb981300149d5ca60a8e9d659b276b9')
+        self.assertEqual(len(catalog['train_shards']), 25)
+        self.assertTrue(all('/train/' in item['path'] for item in catalog['train_shards']))
+        entries[0]['lfs']['oid'] = ''
+        with self.assertRaises(ValueError):
+            catalog_from_tree(entries)
+
+
 @unittest.skipIf(torch is None, 'Torch runtime test runs in the existing itcerdo environment')
 class EntropyOptimizerContracts(unittest.TestCase):
     def test_loss_and_next_update_match_after_checkpoint_restore(self):

@@ -4,7 +4,8 @@
 phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
 현재 제공하는 실행기는 T12 한국어 entropy 교사용이며 본체 ENCODER/GLOBAL/BODY_FULL 학습용이 아니다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
-학습 자료의 형식·분할 확인, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
+NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전체 train 확보/통합은 아래6-4절을 따른다.
+통합 자료 검토, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
 
 ## 1. 저장 경로
 
@@ -32,8 +33,8 @@ job 내부 작업 cwd는 `neuron/runtime`이며 제출 cwd와 독립적이다. �
 **원문과 가중치를 Git에 추가하지 않는다.** 프로젝트 내 `data/`, `artifacts/`, `outputs/`는
 Git 제외 경로다. 로그 전달도 아래의 검토한 `runtimelog`만 stage한다. 기존 `data/Preprocessed`, `data/Raw`,
 GEC checkpoint와 원본 말뭉치를 덮어쓰거나 재분할하지 않는다. NIKL 원본 ZIP은 보존하고,
-해제본은 별도 하위 디렉터리에 둔다. 변환기는 ZIP/Parquet을 직접 읽지 않는다.
-FineWeb2 Parquet 수집/정제 코드는 이 bundle에 없으며, 검토된 JSONL 변환본이 있어야 한다.
+해제본은 별도 하위 디렉터리에 둔다. NIKL 변환기는 ZIP을 직접 읽지 않는다.
+FineWeb2 수집/Parquet 변환/통합은 opt-in `blt_hf.entropy_fineweb`을 사용한다.
 
 ## 2. 코드 다운로드
 
@@ -313,6 +314,87 @@ vi data/korean_cpt/prepared/korean-entropy-v001/manifest.json
 검토 필드: `pii_review_approved`, `near_duplicate_split_review_approved`.
 학습이 시작된 뒤에는 manifest나 원문을 변경하지 않는다.
 
+### 6-4. FineWeb2 한국어 전체 train 확보 및 NIKL 통합
+
+2026-11-01 사용자 선택은 **한국어 train 전체**, 새 산출물 상한은 **10TB
+(10000000000000bytes)**다. 고정 revision `af9c13333eb981300149d5ca60a8e9d659b276b9`의
+`kor_Hang/train`25개 Parquet 메타데이터 합계는105767105257압축bytes다.
+공식 `kor_Hang/test`는 catalog에서 보류하고 내려받지 않는다. 전체 원문 선택은 학습
+노출량이나75/15/10 replay 혼합 비율 승인과 다르다. 임의로 자료를 잘라 예산을 맞추지 않는다.
+
+이번 변경이 반영된 코드에서 bundle verify를 먼저 실행한다. PyArrow26.0.0을 사용한다.
+사용자가 별도 `data/korean_cpt/environments/fineweb-pyarrow`에만 설치하며
+기존 `phdq_blt_hf` 환경/실행 중 작업은 변경하지 않는다. 준비 환경도 Git에 넣지 않는다.
+NIKL audit nikl-v003와 prepared korean-entropy-v001은 그대로 보존한다.
+
+```bash
+python neuron/bundle.py verify &&
+if [[ ! -e data/korean_cpt/environments/fineweb-pyarrow ]]; then python -m venv data/korean_cpt/environments/fineweb-pyarrow; fi &&
+data/korean_cpt/environments/fineweb-pyarrow/bin/python -m pip install 'pyarrow==26.0.0' &&
+PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb catalog \
+    --output data/korean_cpt/manifests/fineweb2-kor-full-v001.json
+```
+
+catalog는 공개 API의 고정 경로/크기/LFS SHA256을 검증해 새 파일에 기록한다.
+이미 있는 catalog를 덮어쓰지 않는다. 실제 다운로드는 다음 명령이다.
+
+```bash
+OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
+PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb download \
+    --catalog data/korean_cpt/manifests/fineweb2-kor-full-v001.json \
+    --output data/korean_cpt/incoming/fineweb2/full-v001 \
+    --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48
+```
+
+모든 원본 Parquet는 보존하고 SHA/크기를 확인한다.32행 batch로 id/source/text JSONL을
+gzip 변환하며 본문을 trim/NFC 변환하거나 빈 본문을 버리지 않는다. 빈 본문은 통합
+quarantine 입력으로 보존한다. 일부 web 문서의 최대16MiB 기록 한도 초과/잘못된 schema는
+원본을 보존하고 중단한다. 이는 자동 품질 필터나 개인정보 정제 완료를 뜻하지 않는다.
+
+download의 `report.json`에서 `status=complete`와25shard를 확인한다. 중단 후 재개는
+같은 코드/catalog/예산에서 다음처럼 명시한다. 완성 파일을 다시 받아 덮어쓰지 않고,
+검증된 부분 다운로드는 Range로 재개한다. 미완료 변환본은 별도 이름으로 보존하고 다시 변환한다.
+
+```bash
+OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
+PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb download \
+    --catalog data/korean_cpt/manifests/fineweb2-kor-full-v001.json \
+    --output data/korean_cpt/incoming/fineweb2/full-v001 \
+    --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48 --resume
+```
+
+전체 다운로드 완료 후 통합한다. 새로운 보호 역할 충돌을 임의로 해소하거나 기존 NIKL
+train/validation/test를 재배정하지 않는다. 이 단계는 새 디렉터리에서만 실행하며,
+통합 중단의 임의 재개는 지원하지 않는다. 실패 산출물을 보존하고 원인을 검토한다.
+
+```bash
+OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 \
+PYTHONPATH=neuron/runtime data/korean_cpt/environments/fineweb-pyarrow/bin/python -u -m blt_hf.entropy_fineweb combine \
+    --nikl-audit data/korean_cpt/audits/nikl-v003 \
+    --nikl-manifest data/korean_cpt/prepared/korean-entropy-v001/manifest.json \
+    --fineweb-report data/korean_cpt/incoming/fineweb2/full-v001/report.json \
+    --output data/korean_cpt/prepared/korean-entropy-nikl-fineweb-v001 \
+    --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48 &&
+python -m json.tool data/korean_cpt/prepared/korean-entropy-nikl-fineweb-v001/report.json
+```
+
+NIKL 원장을 read-only backup한 새 private SQLite에서 문서 ID/NFC·공백 본문 연결을
+통합한다. 연결된 FineWeb 그룹은 기존 NIKL 역할을 따르고,새 그룹만 기존seed42/1%/1%
+정책을 사용한다. 두 NIKL 보호 역할을 잇는 문서는 오류로 중단한다. 정확 중복은 기존
+NIKL 대표를 우선하며 빈 본문은 private 격리 원장에 남긴다. 퍼지/부분중복 검토는 별도다.
+
+통합 다운로드 원본/gzip JSONL과 새 SQLite/파생 JSONL을 합쳐10TB 상한을 검사하고,
+실제 디스크 최소 가용100GiB·주소공간48GiB를 유지한다.10TB가 실제 가용 용량이라고
+가정하거나 파일을 삭제해 자동으로 여유를 만들지 않는다. 진행은 각 output의
+`progress.json`, 성공은 `report.json`의 complete로 구분한다. traceback 후 progress의
+running 표시는 성공이 아니다. Neuron 접속/실행은 사용자 담당이며 별도 Slurm CPU 할당을 요구하지 않는다.
+
+학습은 검토 후 **통합** `korean-entropy-nikl-fineweb-v001/manifest.json`을 사용한다.
+manifest의 splits에는 train/validation만 있고 test는 held_out_test다. PII/근접 중복 검토
+플래그는 false를 유지한다. 두 출처의 실제 문서/바이트 비중은 보고서로 확인하며
+학습 sampling/replay 비율·노출 예산을 자동 확정하지 않는다. Git에 원문/SQLite/JSONL을
+추가하지 않는다. 로그용 작은 보고서도 공개 경로·합계·hash만 검토 후 전달한다.
+
 ## 7. 실행 설정 생성과 승인
 
 새 설정은 승인 false/예산 null로 만든다. 아래 실행명은 예시이며 기존 실행과 겹치지 않아야 한다.
@@ -323,7 +405,7 @@ python - <<'PY'
 import json
 from pathlib import Path
 config = json.loads(Path('neuron/entropy.template.json').read_text())
-config['dataset_manifest'] = str(Path('data/korean_cpt/prepared/korean-entropy-v001/manifest.json').resolve())
+config['dataset_manifest'] = str(Path('data/korean_cpt/prepared/korean-entropy-nikl-fineweb-v001/manifest.json').resolve())
 config['run_dir'] = str(Path('outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01').resolve())
 with Path('artifacts/korean_entropy/configs/ko-entropy-h200-pilot-20261029-01.json').open('x') as handle:
     json.dump(config, handle, indent=2)

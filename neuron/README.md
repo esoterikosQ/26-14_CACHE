@@ -59,7 +59,10 @@ job exit0만 보고 학습 가능으로 판단하지 말고 `preflight.json`의 
 ## 자료와 실행 설정
 
 NIKL 수신은 `data/korean_cpt/incoming/nikl`,약정은 `data/korean_cpt/licenses`다.
-FineWeb2는 별도 승인된 수집/정제와 train/validation 분할이 필요하다. 세종은 필수가 아니다.
+FineWeb2는 `blt_hf.entropy_fineweb`의 고정 catalog/download/combine으로 전체 한국어 train을
+확보하고 기존 NIKL 분할을 보존해 통합한다. 새 산출물 상한10TB/최소 가용100GiB이며
+공식 FineWeb test는 다운로드하지 않는다. [명령표6-4절](command.md#6-4-fineweb2-한국어-전체-train-확보-및-nikl-통합)을 따른다.
+실제 전체 다운로드·통합 완료는 아직 미측정이며 NIKL-only manifest로 전체 준비를 판단하지 않는다. 세종은 필수가 아니다.
 runtime의 `python -m blt_hf.entropy_data --plan <절대경로> --output <신규경로>`는 명시적 JSONL,
 NIKL paragraph/utterance JSON을 지원한다. 실제 수령 schema 확인과 권리/PII/근접중복 분할 검토는 아직 남았다.
 최종평가 자료는 입력하지 않는다. manifest의 승인 필드3종은 검토 없이 true로 바꾸지 않는다.
