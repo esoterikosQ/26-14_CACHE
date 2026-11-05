@@ -184,6 +184,15 @@ class NativeCombineContracts(unittest.TestCase):
                     combine_corpora(audit, manifest, report, root / 'reference', 10**9, 0)
                 with self.assertRaisesRegex(ValueError, message):
                     combine_native(audit, manifest, report, root / 'native', 10**9, 2, 0)
+                import subprocess, sys
+                diagnosis = json.loads(subprocess.run(
+                    [sys.executable, '-m', 'blt_hf.entropy_combine_diagnose', '--fineweb-report', str(report),
+                     '--output', str(root / 'native')], check=True, capture_output=True, text=True,
+                    cwd=Path(__file__).resolve().parents[1]).stdout)
+                self.assertEqual((diagnosis['conflicting_ids'], diagnosis['documents']), (1, 2))
+                self.assertEqual(diagnosis['examples'][0]['id'], 'clash')
+                self.assertEqual([row['prefix'] for row in diagnosis['examples'][0]['documents']], ['body A', 'body B'])
+                self.assertFalse(diagnosis['examples'][0]['normalized_equal'])
         from blt_hf import entropy_fineweb as module
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
