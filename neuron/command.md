@@ -403,6 +403,39 @@ manifest의 splits에는 train/validation만 있고 test는 held_out_test다. PI
 학습 sampling/replay 비율·노출 예산을 자동 확정하지 않는다. Git에 원문/SQLite/JSONL을
 추가하지 않는다. 로그용 작은 보고서도 공개 경로·합계·hash만 검토 후 전달한다.
 
+### 6-5. 빠른 통합(native, 2026-11-05)
+
+위 SQLite 통합은 문서마다 본문을 DB에 넣어 수 일이 걸리고 재개가 없다. 2026-11-05 사용자
+결정으로 같은 분할 결과를 만드는 `blt_hf.entropy_combine`으로 다시 실행한다. 입력 검증,
+그룹 규칙(ID/NFC·공백 정규화 본문 연결), NIKL 역할 보존, 새 그룹 seed 해시, 대표 문서
+선택, 출력 순서는 그대로다. train/validation/test JSONL과 manifest.json이 기존 구현과
+바이트 단위로 같음을 합성·실제 FineWeb2 표본으로 확인했다. 본문은 DB에 넣지 않고
+문서별 SHA-256만 메모리에 두며, shard를 병렬로 해시하고 해시 첫 바이트 버킷 정렬로 쓴다.
+FineWeb 빈 본문 격리 원장은 `quarantine.jsonl`이다(private, Git 금지).
+
+C++11 컴파일러가 필요하다. 먼저 확인하고, 없으면 사용 가능한 gcc 모듈을 load한 뒤 다시 확인한다.
+진행 중인 SQLite 통합을 중단할지와 그 산출물 정리는 사용자가 결정한다(이 명령은 지우지 않는다).
+새 출력 디렉터리를 사용한다. `--workers`는 이 셸에서 쓸 수 있는 CPU 수 이하로 정한다.
+
+```bash
+conda activate phdq_blt_hf &&
+c++ --version | head -n 1 &&
+python neuron/bundle.py verify &&
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+PYTHONPATH=neuron/runtime python -u -m blt_hf.entropy_combine \
+    --nikl-audit data/korean_cpt/audits/nikl-v003 \
+    --nikl-manifest data/korean_cpt/prepared/korean-entropy-v001/manifest.json \
+    --fineweb-report data/korean_cpt/incoming/fineweb2/full-v001/report.json \
+    --output data/korean_cpt/prepared/korean-entropy-nikl-fineweb-native-v001 \
+    --max-output-bytes 10000000000000 --min-free-gib 100 --memory-limit-gib 48 \
+    --workers 8 2>&1 | tee data/korean_cpt/prepared/combine-native-v001.log
+```
+
+진행은 표준 출력의 stage(scan → group → buckets → merge)와 출력의 `progress.json`으로 본다.
+시작 직후 출력 크기·여유 공간을 미리 검사하며(입력 본문의 약 2배), 부족하면 작업 전에 실패한다.
+성공하면 `report.json` status=complete다. 재개는 지원하지 않으며 실패 시 새 디렉터리로 다시 실행한다.
+학습에는 `korean-entropy-nikl-fineweb-native-v001/manifest.json`을 사용한다.
+
 ## 7. 실행 설정 생성과 승인
 
 새 설정은 승인 false/예산 null로 만든다. 아래 실행명은 예시이며 기존 실행과 겹치지 않아야 한다.
