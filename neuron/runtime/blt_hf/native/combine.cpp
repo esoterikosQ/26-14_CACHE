@@ -448,20 +448,28 @@ int bltc_group(const uint8_t* fineweb, uint64_t fineweb_count,
                uint64_t nikl_groups, const uint8_t* token_kind, const uint8_t* token_value, const int64_t* token_owner,
                uint64_t token_count, const char* seed_prefix, uint64_t seed_length, double validation_percent,
                double test_percent, uint8_t* fineweb_split, uint8_t* nikl_split, uint64_t* stats,
-               char* error, uint64_t error_size) {
-    // Same (source, id) must keep one body; every FineWeb record shares SOURCE, including quarantined ones.
+               uint8_t* conflicts, char* error, uint64_t error_size) {
+    // Same (source, id) with different bodies fails unless conflicts is given; then every member is flagged
+    // and stays linked through the id token below. Every FineWeb record shares SOURCE, including quarantined ones.
     {
         std::vector<uint32_t> order(fineweb_count);
         for (uint64_t i = 0; i < fineweb_count; ++i) order[i] = uint32_t(i);
         std::sort(order.begin(), order.end(), [&](uint32_t a, uint32_t b) {
-            int c = std::memcmp(fineweb + a * RECORD + 32, fineweb + b * RECORD + 32, 32);
+            int c = std::memcmp(fineweb + uint64_t(a) * RECORD + 32, fineweb + uint64_t(b) * RECORD + 32, 32);
             return c < 0 || (c == 0 && a < b);
         });
-        for (uint64_t i = 1; i < fineweb_count; ++i) {
-            const uint8_t* a = fineweb + uint64_t(order[i - 1]) * RECORD;
-            const uint8_t* b = fineweb + uint64_t(order[i]) * RECORD;
-            if (!std::memcmp(a + 32, b + 32, 32) && std::memcmp(a, b, 32))
-                { fail(error, error_size, "Conflicting FineWeb document identity"); return 1; }
+        uint64_t start = 0;
+        for (uint64_t i = 1; i <= fineweb_count; ++i) {
+            const uint8_t* head = fineweb + uint64_t(order[start]) * RECORD;
+            if (i < fineweb_count && !std::memcmp(fineweb + uint64_t(order[i]) * RECORD + 32, head + 32, 32)) continue;
+            bool differ = false;
+            for (uint64_t j = start + 1; j < i && !differ; ++j)
+                differ = std::memcmp(fineweb + uint64_t(order[j]) * RECORD, head, 32) != 0;
+            if (differ) {
+                if (!conflicts) { fail(error, error_size, "Conflicting FineWeb document identity"); return 1; }
+                for (uint64_t j = start; j < i; ++j) conflicts[order[j]] = 1;
+            }
+            start = i;
         }
     }
     std::vector<uint32_t> node_record;

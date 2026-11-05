@@ -87,7 +87,8 @@ def load_native(path):
     library.bltc_roundtrip.argtypes = [text, u64, pointer, u64, out, pointer, u64]
     library.bltc_scan.argtypes = [text, u64, ctypes.c_int, text, u64, pointer, u64, out, out, pointer, u64]
     library.bltc_group.argtypes = [pointer, u64, pointer, pointer, pointer, u64, u64, pointer, pointer, pointer, u64,
-                                   text, u64, ctypes.c_double, ctypes.c_double, pointer, pointer, pointer, pointer, u64]
+                                   text, u64, ctypes.c_double, ctypes.c_double, pointer, pointer, pointer, pointer,
+                                   pointer, u64]
     library.bltc_bucket_open.argtypes = [text]
     library.bltc_bucket_open.restype = pointer
     library.bltc_bucket_close.argtypes = [pointer]
@@ -209,6 +210,22 @@ def write_buckets(task):
     return int((splits != 255).sum())
 
 
+def conflict_rows(task):
+    path, relative, offset, positions = task
+    wanted, rows = set(positions), []
+    with gzip.open(path, 'rb') as stream:
+        for position, line in enumerate(stream):
+            if position in wanted:
+                row = json.loads(line)
+                rows.append({'document_id': row['id'], 'exact_sha': _digest(row['text']),
+                             'file_path': relative, 'position': position, 'index': offset + position})
+                if len(rows) == len(wanted):
+                    break
+    if len(rows) != len(wanted):
+        raise ValueError('Conflicting FineWeb rows not found')
+    return rows
+
+
 def _validated_inputs(nikl_audit, nikl_manifest, fineweb_report):
     base = json.loads(nikl_manifest.read_text())
     audit = json.loads((nikl_audit / 'audit.json').read_text())
@@ -280,7 +297,7 @@ def _nikl_graph(database, expected, policy):
 
 
 def combine_native(nikl_audit, nikl_manifest, fineweb_report, output, max_output_bytes, workers,
-                   min_free_bytes=MIN_FREE_BYTES):
+                   min_free_bytes=MIN_FREE_BYTES, link_id_conflicts=False):
     if type(workers) is not int or workers < 1:
         raise ValueError('Positive worker count required')
     nikl_audit, nikl_manifest, fineweb_report, output = (
@@ -349,16 +366,33 @@ def combine_native(nikl_audit, nikl_manifest, fineweb_report, output, max_output
     fineweb_split = np.empty(fineweb_count, np.uint8)
     nikl_split = np.empty(len(nikl_role), np.uint8)
     stats = np.zeros(5, np.uint64)
+    conflicts = np.zeros(fineweb_count, np.uint8) if link_id_conflicts else None
     seed = f'{policy["seed"]}:'.encode('utf-8')
     error = ctypes.create_string_buffer(512)
     _check(library.bltc_group(
         _address(records), fineweb_count, _address(nikl_exact), _address(nikl_role), _address(nikl_group), len(nikl_role),
         nikl_groups, _address(kinds), _address(tokens), _address(owners), len(kinds), seed, len(seed),
         float(policy['validation_percent']), float(policy['test_percent']), _address(fineweb_split),
-        _address(nikl_split), _address(stats), error, len(error)), error)
+        _address(nikl_split), _address(stats), _address(conflicts) if link_id_conflicts else None,
+        error, len(error)), error)
     if not np.array_equal(nikl_split, nikl_role):
         raise ValueError('Protected NIKL split moved')
-    del records, nikl_exact, nikl_group, kinds, tokens, owners
+    conflict_ledger = []
+    if link_id_conflicts:
+        conflict_tasks, offset = [], 0
+        for task, shard in zip(tasks, shards):
+            positions = np.flatnonzero(conflicts[offset:offset + shard['documents']]).tolist()
+            if positions:
+                conflict_tasks.append((task[1], task[7], offset, positions))
+            offset += shard['documents']
+        with context.Pool(workers) as pool:
+            for rows in pool.imap(conflict_rows, conflict_tasks):
+                for row in rows:
+                    split = int(fineweb_split[row.pop('index')])
+                    conflict_ledger.append({**row, 'split': SPLITS[split] if split != 255 else None})
+        conflict_ledger.sort(key=lambda row: (row['document_id'], row['file_path'], row['position']))
+        stage('id_conflicts', ids=len({row['document_id'] for row in conflict_ledger}), documents=len(conflict_ledger))
+    del records, nikl_exact, nikl_group, kinds, tokens, owners, conflicts
     offset = 0
     for number, shard in enumerate(shards):
         np.save(work / f'splits-{number:03d}.npy', fineweb_split[offset:offset + shard['documents']])
@@ -431,6 +465,14 @@ def combine_native(nikl_audit, nikl_manifest, fineweb_report, output, max_output
                 'pii_review_approved': False, 'near_duplicate_split_review_approved': False,
                 'preprocessing': 'Accepted UTF-8 unchanged; normalization used only for grouping; no prescribed byte mixture',
                 'splits': {split: specs[split] for split in ('train', 'validation')}, 'held_out_test': specs['test']}
+    if link_id_conflicts:
+        with (output / 'id_conflicts.jsonl').open('x', encoding='utf-8') as ledger:
+            for row in conflict_ledger:
+                ledger.write(json.dumps(row, ensure_ascii=False) + '\n')
+        manifest['fineweb_id_conflict_policy'] = {
+            'rule': 'Same FineWeb id with different bodies: keep every body, link by id into one split group',
+            'ids': len({row['document_id'] for row in conflict_ledger}), 'documents': len(conflict_ledger),
+            'ledger': 'id_conflicts.jsonl', 'ledger_sha256': file_sha256(output / 'id_conflicts.jsonl')}
     _write_json(output / 'manifest.json', manifest)
     inspect_dataset(output / 'manifest.json')
     result = {'schema_version': 1, 'status': 'complete', 'splits': summaries,
@@ -440,6 +482,7 @@ def combine_native(nikl_audit, nikl_manifest, fineweb_report, output, max_output
               'quarantined_utf8_bytes': audit['quarantined_utf8_bytes'] + empty_bytes,
               'exact_duplicate_documents': int(stats[4]) - int(stats[3]),
               'nikl_original_roles_preserved': True, 'policy': policy,
+              'fineweb_id_conflicts': manifest.get('fineweb_id_conflict_policy', 'fail'),
               'manifest_sha256': file_sha256(output / 'manifest.json'),
               'quarantine_ledger': 'quarantine.jsonl (FineWeb); NIKL quarantine stays in the audit index',
               'quarantine_ledger_sha256': file_sha256(output / 'quarantine.jsonl'),
@@ -465,13 +508,16 @@ def main():
     parser.add_argument('--min-free-gib', type=int, default=100)
     parser.add_argument('--memory-limit-gib', type=int, default=48)
     parser.add_argument('--workers', type=int, required=True)
+    parser.add_argument('--link-id-conflicts', action='store_true',
+                        help='keep FineWeb documents that share an id but differ in body, linked into one split group')
     args = parser.parse_args()
     import resource
     if args.memory_limit_gib <= 0:
         parser.error('Positive memory limit required')
     resource.setrlimit(resource.RLIMIT_AS, (args.memory_limit_gib * 1024**3,) * 2)
     result = combine_native(args.nikl_audit, args.nikl_manifest, args.fineweb_report, args.output,
-                            args.max_output_bytes, args.workers, args.min_free_gib * 1024**3)
+                            args.max_output_bytes, args.workers, args.min_free_gib * 1024**3,
+                            args.link_id_conflicts)
     print(json.dumps(result, indent=2))
 
 

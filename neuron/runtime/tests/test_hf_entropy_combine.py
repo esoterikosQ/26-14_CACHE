@@ -218,6 +218,42 @@ class NativeCombineContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'hash/path changed'):
                 combine_native(audit, manifest, report, root / 'tampered', 10**9, 2, 0)
 
+    def test_linked_id_conflicts_keep_both_bodies_in_one_split(self):
+        from blt_hf.entropy_combine import combine_native
+        from blt_hf.entropy_fineweb import combine_corpora, SOURCE
+        clash = [(3, {'id': 'clash', 'source': SOURCE, 'text': 'body A'}),
+                 (5, {'id': 'clash', 'source': SOURCE, 'text': 'body B'})]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit, manifest, report = self.corpus(root)
+            combine_corpora(audit, manifest, report, root / 'reference', 10**9, 0)
+            plain = combine_native(audit, manifest, report, root / 'plain', 10**9, 2, 0, link_id_conflicts=True)
+            self.assertEqual(json.loads((root / 'plain/manifest.json').read_text())['fineweb_id_conflict_policy']['documents'], 0)
+            self.assertEqual(plain['splits'], json.loads((root / 'reference/report.json').read_text())['splits'])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit, manifest, report = self.corpus(root, clash)
+            result = combine_native(audit, manifest, report, root / 'native', 10**9, 2, 0, link_id_conflicts=True)
+            reference = Path(directory) / 'reference'
+            (root / 'base').mkdir()
+            audit2, manifest2, report2 = self.corpus(root / 'base')
+            combine_corpora(audit2, manifest2, report2, reference, 10**9, 0)
+            ledger = [json.loads(line) for line in (root / 'native/id_conflicts.jsonl').read_text().split('\n') if line]
+            self.assertEqual([(row['document_id'], row['file_path'], row['position']) for row in ledger],
+                             [('clash', 'fineweb2/003.jsonl.gz', 82), ('clash', 'fineweb2/005.jsonl.gz', 82)])
+            self.assertEqual(len({row['split'] for row in ledger}), 1)
+            split = ledger[0]['split']
+            for name in ('train', 'validation', 'test'):
+                lines = set((root / f'native/{name}.jsonl').read_text().split('\n')) - {''}
+                bodies = {json.loads(line)['text'] for line in lines if json.loads(line)['id'] == 'clash'}
+                self.assertEqual(bodies, {'body A', 'body B'} if name == split else set(), name)
+                rest = {line for line in lines if json.loads(line)['id'] != 'clash'}
+                self.assertEqual(rest, set((reference / f'{name}.jsonl').read_text().split('\n')) - {''}, name)
+            policy = json.loads((root / 'native/manifest.json').read_text())['fineweb_id_conflict_policy']
+            self.assertEqual((policy['ids'], policy['documents']), (1, 2))
+            self.assertEqual(policy['ledger_sha256'], file_sha256(root / 'native/id_conflicts.jsonl'))
+            self.assertEqual(result['fineweb_id_conflicts'], policy)
+
 
 if __name__ == '__main__':
     unittest.main()
