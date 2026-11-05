@@ -52,6 +52,16 @@ def inspect_dataset(manifest_path):
     if set(manifest.get('splits', {})) != {'train', 'validation'}:
         raise ValueError('Only explicit train/validation files allowed; final test stays unopened')
     seen_ids, seen_text = set(), {}
+    allowed = set()
+    policy = manifest.get('fineweb_id_conflict_policy')
+    if policy:
+        ledger = (manifest_path.parent / policy['ledger']).resolve()
+        if not ledger.is_relative_to(manifest_path.parent) or file_sha256(ledger) != policy['ledger_sha256']:
+            raise ValueError('ID conflict ledger hash/path changed')
+        for line in ledger.read_text(encoding='utf-8').split('\n'):
+            if line:
+                row = json.loads(line)
+                allowed.add((row['document_id'], row['exact_sha']))
     summary = {}
     for split, spec in manifest['splits'].items():
         path = (manifest_path.parent / spec['path']).resolve()
@@ -60,10 +70,10 @@ def inspect_dataset(manifest_path):
         count = total_bytes = 0
         for record in documents(path):
             identity = (record['source'], record['id'])
-            if identity in seen_ids:
+            digest = hashlib.sha256(record['text'].encode('utf-8')).hexdigest()
+            if identity in seen_ids and (record['id'], digest) not in allowed:
                 raise ValueError(f'Duplicate document identity: {identity}')
             seen_ids.add(identity)
-            digest = hashlib.sha256(record['text'].encode('utf-8')).hexdigest()
             if digest in seen_text:
                 raise ValueError(f'Duplicate text across {seen_text[digest]} and {split}')
             seen_text[digest] = split

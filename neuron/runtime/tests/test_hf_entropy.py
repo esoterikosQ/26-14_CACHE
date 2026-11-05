@@ -67,6 +67,37 @@ class EntropyDataContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'final test'):
                 inspect_dataset(config)
 
+    def test_manifest_allows_duplicate_ids_only_from_conflict_ledger(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rows = {'train': [('clash', 'body A'), ('other', 'x')], 'validation': [('clash', 'body B')]}
+            manifest = {'splits': {}}
+            for split, items in rows.items():
+                path = root / f'{split}.jsonl'
+                path.write_text(''.join(json.dumps({'id': i, 'source': 's', 'text': t}) + '\n' for i, t in items))
+                manifest['splits'][split] = {'path': path.name, 'sha256': file_sha256(path)}
+            config = root / 'manifest.json'
+            config.write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, 'Duplicate document identity'):
+                inspect_dataset(config)
+            ledger = root / 'id_conflicts.jsonl'
+
+            def allow(texts):
+                ledger.write_text(''.join(json.dumps({'document_id': 'clash', 'exact_sha': hashlib.sha256(t.encode()).hexdigest()}) + '\n'
+                                          for t in texts))
+                manifest['fineweb_id_conflict_policy'] = {'ledger': ledger.name, 'ledger_sha256': file_sha256(ledger)}
+                config.write_text(json.dumps(manifest))
+            allow(['body A', 'body B'])
+            self.assertEqual(inspect_dataset(config)[1]['validation']['documents'], 1)
+            allow(['body A'])
+            with self.assertRaisesRegex(ValueError, 'Duplicate document identity'):
+                inspect_dataset(config)
+            allow(['body A', 'body B'])
+            ledger.write_text('')
+            with self.assertRaisesRegex(ValueError, 'ledger hash'):
+                inspect_dataset(config)
+
     def test_explicit_nikl_conversion_and_cross_split_duplicate_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
