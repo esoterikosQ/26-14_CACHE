@@ -96,6 +96,9 @@ class CountTable:
         self._frozen = True
         return self
 
+    def lookup(self, context):
+        return self._rows.get(context, {}), self._totals.get(context, 0)
+
     def to_dict(self):
         return {
             "config": asdict(self.config),
@@ -184,9 +187,10 @@ class CountModel:
         probability = np.full(self.config.vocab_size, self.config.alpha / self.config.vocab_size, dtype=np.float64)
         total = self.config.alpha
         for table, weight in ((self.background, 1.0), (self.online, self.config.online_weight)):
-            for token_id, count in table._rows.get(b"", {}).items():
+            row, row_total = table.lookup(b"")
+            for token_id, count in row.items():
                 probability[token_id] += weight * count
-            total += weight * table._totals.get(b"", 0)
+            total += weight * row_total
         probability /= total
         weighted = probability.copy()
         normalizer = 1.0
@@ -196,9 +200,10 @@ class CountModel:
             probability = weighted / normalizer * self.config.kappa
             total = self.config.kappa
             for table, weight in ((self.background, 1.0), (self.online, self.config.online_weight)):
-                for token_id, count in table._rows.get(context, {}).items():
+                row, row_total = table.lookup(context)
+                for token_id, count in row.items():
                     probability[token_id] += weight * count
-                total += weight * table._totals.get(context, 0)
+                total += weight * row_total
             probability /= total
             weighted = self.config.suffix_decay * weighted + probability
             normalizer = self.config.suffix_decay * normalizer + 1
