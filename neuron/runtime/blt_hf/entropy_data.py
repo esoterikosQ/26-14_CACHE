@@ -85,9 +85,116 @@ def inspect_dataset(manifest_path):
     return manifest, summary
 
 
+def _file_stat(path):
+    stat = Path(path).stat()
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def inspect_dataset_cached(manifest_path):
+    """Full inspection once, then reuse it while the manifest hash and split size/mtime are unchanged."""
+    manifest_path = Path(manifest_path).resolve()
+    cache = manifest_path.with_name(manifest_path.stem + '.inspection.json')
+    digest = file_sha256(manifest_path)
+    if cache.is_file():
+        record = json.loads(cache.read_text())
+        if (record['manifest_sha256'] == digest and
+                all(_file_stat(spec['path']) == record['stat'][split] for split, spec in record['summary'].items())):
+            return json.loads(manifest_path.read_text()), record['summary']
+    manifest, summary = inspect_dataset(manifest_path)
+    record = {'manifest_sha256': digest, 'summary': summary,
+              'stat': {split: _file_stat(spec['path']) for split, spec in summary.items()},
+              'trust': 'Split SHA256 and contract verified once; later runs trust unchanged size and mtime'}
+    temporary = cache.with_suffix('.partial')
+    temporary.write_text(json.dumps(record, indent=2) + '\n')
+    temporary.replace(cache)
+    return manifest, summary
+
+
 def examples(path, chunk_bytes):
     for record in documents(path):
         yield from byte_examples(record['text'], chunk_bytes)
+
+
+BOS, EOS, PAD = 1, 2, 3
+
+
+def document_tokens(text):
+    import numpy as np
+    data = np.frombuffer(text.encode('utf-8', errors='strict'), dtype=np.uint8)
+    tokens = np.empty(len(data) + 2, dtype=np.int64)
+    tokens[0], tokens[-1] = BOS, EOS
+    tokens[1:-1] = data
+    tokens[1:-1] += 4
+    return tokens
+
+
+class PackedStream:
+    """Fixed-length sequences of BOS+bytes+EOS documents isolated by the EOS mask.
+
+    A document cut at a sequence end resumes at the start of the next sequence behind its
+    previous `context` tokens (loss masked). That fills each target's per-layer attention window;
+    deeper layers still lose the earlier receptive field, as at any sequence start.
+    State is (epoch, byte offset of the current document line, next target index in it).
+    """
+
+    def __init__(self, path, sequence_length, context, state=None, max_documents=None, wrap=False):
+        if type(sequence_length) is not int or type(context) is not int or not 0 < context < sequence_length:
+            raise ValueError('Sequence length must exceed a positive context')
+        self.path, self.length, self.context = Path(path), sequence_length, context
+        self.max_documents, self.wrap = max_documents, wrap
+        self.state = dict(state or {'epoch': 0, 'offset': 0, 'next_target': 1, 'documents': 0})
+        self._handle = self._document = None
+
+    def close(self):
+        if self._handle is not None:
+            self._handle.close()
+            self._handle = None
+
+    def _load(self):
+        if self._document is not None:
+            return True
+        if self.max_documents is not None and self.state['next_target'] == 1 and self.state['documents'] >= self.max_documents:
+            return False
+        if self._handle is None:
+            self._handle = self.path.open('rb')
+        self._handle.seek(self.state['offset'])
+        raw = self._handle.readline(MAX_RECORD_BYTES + 1)
+        if not raw:
+            if not self.wrap or self.state['offset'] == 0:
+                return False
+            self.state.update(epoch=self.state['epoch'] + 1, offset=0, next_target=1, documents=0)
+            return self._load()
+        if len(raw) > MAX_RECORD_BYTES:
+            raise ValueError(f'Record exceeds 16MiB at byte {self.state["offset"]}: {self.path}')
+        record = json.loads(raw.decode('utf-8'))
+        if not isinstance(record, dict) or not isinstance(record.get('text'), str) or not record['text']:
+            raise ValueError(f'Expected nonempty text at byte {self.state["offset"]}: {self.path}')
+        self._document, self._next_offset = document_tokens(record['text']), self.state['offset'] + len(raw)
+        return True
+
+    def next_sequence(self):
+        """Returns (tokens[length+1], keep[length]) where keep marks targets tokens[1:] to train, or None."""
+        import numpy as np
+        size = self.length + 1
+        tokens = np.full(size, PAD, dtype=np.int64)
+        keep = np.zeros(self.length, dtype=bool)
+        fill = 0
+        while fill < size and self._load():
+            document, target = self._document, self.state['next_target']
+            if fill and target != 1:
+                raise AssertionError('Continuations must start a sequence')
+            start = max(0, target - self.context)
+            piece = document[start:start + size - fill]
+            tokens[fill:fill + len(piece)] = piece
+            keep[fill + target - start - 1:fill + len(piece) - 1] = True
+            fill += len(piece)
+            end = start + len(piece)
+            if end == len(document):
+                self.state.update(offset=self._next_offset, next_target=1, documents=self.state['documents'] + 1)
+                self._document = None
+            else:
+                self.state['next_target'] = end
+        return (tokens, keep) if fill else None
 
 
 def prepare(plan_path, output):

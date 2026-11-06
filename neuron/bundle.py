@@ -89,8 +89,10 @@ def validate_job(config, environment, job_details, root=ROOT, now=None):
             raise ValueError('Training is not authorized in this config')
         end = datetime.fromisoformat(fields['EndTime']).astimezone(timezone.utc)
         remaining = (end - (now or datetime.now(timezone.utc))).total_seconds()
-        if type(config.get('max_seconds')) is not int or not 0 < config['max_seconds'] <= remaining - 900:
-            raise ValueError('Approved runtime must leave at least15 minutes before job end')
+        if type(config.get('max_seconds')) is not int or config['max_seconds'] < 1:
+            raise ValueError('Positive cumulative max_seconds required')
+        if remaining < 1800:
+            raise ValueError('Job needs at least 30 minutes; SIGUSR1 saves and stops before the end')
         if mode == 'pilot' and not 1 <= int(environment.get('PILOT_STEPS', '2')) <= 100:
             raise ValueError('PILOT_STEPS must be1..100')
     return mode

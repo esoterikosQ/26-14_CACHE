@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
-#SBATCH --time=02:00:00
-#SBATCH --signal=B:USR1@300
+#SBATCH --time=24:00:00
+#SBATCH --signal=B:USR1@600
 #SBATCH --comment="field=nlp;appl=pytorch"
 #SBATCH --output=/scratch/r984a02/blt-cache/entropy-%j.out
 #SBATCH --error=/scratch/r984a02/blt-cache/entropy-%j.err

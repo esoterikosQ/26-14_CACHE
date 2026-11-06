@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import random
 import signal
 import tempfile
 import unittest
@@ -11,6 +12,39 @@ try:
     import torch
 except ImportError:
     torch = None
+try:
+    import numpy
+except ImportError:
+    numpy = None
+
+
+def write_corpus(path, texts, prefix=''):
+    path.write_text(''.join(json.dumps({'id': f'{prefix}{index}', 'source': 's', 'text': text}, ensure_ascii=False) + '\n'
+                            for index, text in enumerate(texts)), encoding='utf-8')
+
+
+def random_texts(seed, count, longest):
+    generator = random.Random(seed)
+    return [''.join(generator.choice('ab한 \n"') for _ in range(generator.randint(1, longest))) for _ in range(count)]
+
+
+def drain(stream):
+    rows, states = [], []
+    while (row := stream.next_sequence()) is not None:
+        rows.append(row)
+        states.append(dict(stream.state))
+    stream.close()
+    return rows, states
+
+
+def segment_start(tokens, position):
+    ends = [index for index in range(position) if tokens[index] == 2]
+    return ends[-1] + 1 if ends else 0
+
+
+def visible_window(tokens, position, window):
+    """Positions the osc mask lets `position` attend to directly: same EOS segment, distance < window."""
+    return max(segment_start(tokens, position), position - window + 1)
 
 
 class EntropyDataContracts(unittest.TestCase):
@@ -128,13 +162,13 @@ class EntropyDataContracts(unittest.TestCase):
         config = json.loads((Path(__file__).resolve().parents[1] /
                              'plan/korean_entropy_preparation.json').read_text())
         config.update(training_authorized=True, dataset_manifest='synthetic-manifest.json',
-                      max_steps=4, max_train_bytes=100, max_seconds=100,
+                      max_steps=20000, max_train_bytes=100, max_seconds=100,
                       max_run_bytes=100, max_gpu_memory_bytes=100)
         with tempfile.TemporaryDirectory() as directory:
             config['model_path'] = directory
             (Path(directory) / 'model.safetensors').touch()
             manifest = {'pii_review_approved': True, 'near_duplicate_split_review_approved': True}
-            with patch('blt_hf.entropy_train.inspect_dataset', return_value=(manifest, {})):
+            with patch('blt_hf.entropy_train.inspect_dataset_cached', return_value=(manifest, {})):
                 self.assertIs(preflight(config)['training_ready'], True)
                 for key in tuple(manifest):
                     manifest[key] = False
@@ -142,6 +176,10 @@ class EntropyDataContracts(unittest.TestCase):
                     self.assertIs(report['training_ready'], False)
                     self.assertEqual(report['blockers'], [f'dataset {key} required'])
                     manifest[key] = True
+                config['max_steps'] = 10000
+                self.assertEqual(preflight(config)['blockers'], ['max_steps must exceed warmup_steps + min_decay_steps'])
+                config.update(max_steps=20000, sequence_length=512, attention_backend='flash')
+                self.assertEqual(len(preflight(config)['blockers']), 2)
 
     def test_preflight_stays_blocked_without_data_and_budgets(self):
         from blt_hf.entropy_train import preflight
@@ -163,6 +201,83 @@ class EntropyDataContracts(unittest.TestCase):
             config['min_free_disk_bytes'] = 1 << 60
             with self.assertRaisesRegex(ValueError, 'Free disk'):
                 check_storage(root, config)
+
+    def test_warmup_stable_decay_and_plateau_rule(self):
+        from blt_hf.entropy_train import decay_length, learning_rate, plateaued
+        config = {'lr': 3e-4, 'warmup_steps': 5000, 'min_lr_ratio': .1, 'decay_fraction': .1,
+                  'min_decay_steps': 5000, 'plateau_patience': 3, 'plateau_min_delta': .002}
+        self.assertAlmostEqual(learning_rate(0, config, None), 3e-4 / 5000)
+        self.assertAlmostEqual(learning_rate(4999, config, None), 3e-4)
+        self.assertEqual(learning_rate(10 ** 6, config, None), 3e-4)
+        decay = {'start': 100000, 'length': 10000}
+        self.assertEqual(learning_rate(100000, config, decay), 3e-4)
+        self.assertAlmostEqual(learning_rate(105000, config, decay), 3e-4 * .55)
+        self.assertAlmostEqual(learning_rate(110000, config, decay), 3e-5)
+        self.assertEqual((decay_length(20000, config), decay_length(200000, config)), (5000, 20000))
+        history = [[5000, 1.0], [10000, .9], [15000, .899], [20000, .8985], [25000, .8984]]
+        self.assertFalse(plateaued(history[:3], config))
+        self.assertFalse(plateaued(history[:4], config))
+        self.assertFalse(plateaued(history[:4] + [[25000, .85]], config))
+        self.assertTrue(plateaued(history, config))
+        self.assertTrue(plateaued(history + [[30000, .95]], config))
+
+    @unittest.skipIf(numpy is None, 'NumPy runs in the existing conda environment')
+    def test_packed_stream_gives_every_target_its_isolated_document_window(self):
+        from collections import Counter
+        from blt_hf.entropy_data import PackedStream, document_tokens
+        texts = random_texts(3, 60, 60) + ['x' * 200, 'y']
+        length, window = 32, 8
+        expected = Counter()
+        for text in texts:
+            document = document_tokens(text)
+            for target in range(1, len(document)):
+                expected[(tuple(document[max(0, target - window):target]), int(document[target]))] += 1
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'train.jsonl'
+            write_corpus(path, texts)
+            rows, states = drain(PackedStream(path, length, window))
+            actual = Counter()
+            for tokens, keep in rows:
+                self.assertEqual((tokens.shape, keep.shape), ((length + 1,), (length,)))
+                for position in numpy.flatnonzero(keep):
+                    start = visible_window(tokens, position, window)
+                    actual[(tuple(tokens[start:position + 1]), int(tokens[position + 1]))] += 1
+            self.assertEqual(actual, expected)
+            self.assertEqual(states[-1]['documents'], len(texts))
+            for index in (0, 5, len(rows) // 2, len(rows) - 2):
+                resumed, _ = drain(PackedStream(path, length, window, states[index]))
+                self.assertEqual(len(resumed), len(rows) - index - 1)
+                for (tokens, keep), (other_tokens, other_keep) in zip(resumed, rows[index + 1:]):
+                    numpy.testing.assert_array_equal(tokens, other_tokens)
+                    numpy.testing.assert_array_equal(keep, other_keep)
+            limited, limited_states = drain(PackedStream(path, length, window, max_documents=7))
+            self.assertEqual(limited_states[-1]['documents'], 7)
+            wrapped = PackedStream(path, length, window, wrap=True)
+            for _ in range(len(rows) + 3):
+                self.assertIsNotNone(wrapped.next_sequence())
+            self.assertEqual(wrapped.state['epoch'], 1)
+            wrapped.close()
+            with self.assertRaises(ValueError):
+                PackedStream(path, 8, 8)
+
+    @unittest.skipIf(numpy is None, 'NumPy runs in the existing conda environment')
+    def test_cached_inspection_reuses_only_unchanged_splits(self):
+        from blt_hf.entropy_data import inspect_dataset_cached
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = {'splits': {}}
+            for split, text in [('train', '학습'), ('validation', '검증')]:
+                write_corpus(root / f'{split}.jsonl', [text + split], prefix=split)
+                manifest['splits'][split] = {'path': f'{split}.jsonl', 'sha256': file_sha256(root / f'{split}.jsonl')}
+            config = root / 'manifest.json'
+            config.write_text(json.dumps(manifest))
+            _, summary = inspect_dataset_cached(config)
+            self.assertTrue((root / 'manifest.inspection.json').is_file())
+            with patch('blt_hf.entropy_data.inspect_dataset', side_effect=AssertionError('not cached')):
+                self.assertEqual(inspect_dataset_cached(config)[1], summary)
+            write_corpus(root / 'train.jsonl', ['변조'], prefix='train')
+            with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+                inspect_dataset_cached(config)
 
 
 class EntropyCorpusContracts(unittest.TestCase):
@@ -531,55 +646,132 @@ class FineWebCorpusContracts(unittest.TestCase):
             catalog_from_tree(entries)
 
 
-@unittest.skipIf(torch is None, 'Torch runtime test runs in the existing itcerdo environment')
+@unittest.skipIf(torch is None or numpy is None, 'Torch runtime test runs in the existing itcerdo environment')
 class EntropyOptimizerContracts(unittest.TestCase):
-    def test_loss_and_next_update_match_after_checkpoint_restore(self):
-        from blt_hf.entropy_train import update, save_state, restore_state, loss_sums
+    def packed(self, directory, texts, length=32, window=8):
+        from blt_hf.entropy_data import PackedStream
+        from blt_hf.entropy_train import sequences
+        path = Path(directory) / 'train.jsonl'
+        write_corpus(path, texts)
+        stream = PackedStream(path, length, window)
+        batch = sequences(stream, 6)
+        stream.close()
+        return batch
+
+    def test_master_weight_step_and_checkpoint_restore_are_exact(self):
+        from blt_hf.entropy_train import train_step, save_state, restore_state
 
         class TinyPatcher(torch.nn.Module):
-            def __init__(self):
+            def __init__(self, dropout=.2):
                 super().__init__()
                 self.embedding = torch.nn.Embedding(260, 8)
-                self.dropout = torch.nn.Dropout(.2)
+                self.dropout = torch.nn.Dropout(dropout)
                 self.head = torch.nn.Linear(8, 260)
 
             def forward(self, input_ids, use_cache=False):
                 return None, None, self.head(self.dropout(self.embedding(input_ids)))
 
-        torch.manual_seed(7)
-        model = TinyPatcher().train()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=.01)
-        batch = list(byte_examples('합성 자료', 8))
-        update(model, optimizer, batch, 'cpu', 1.)
+        def setup(model):
+            names = [name for name, _ in model.named_parameters()]
+            master = [value.detach().float().clone().requires_grad_(True) for value in model.parameters()]
+            return names, master, torch.optim.AdamW(master, lr=.01)
+
         with tempfile.TemporaryDirectory() as directory:
+            tokens, keep = self.packed(directory, random_texts(5, 12, 40))
+            torch.manual_seed(7)
+            model = TinyPatcher().to(torch.bfloat16).train()
+            names, master, optimizer = setup(model)
+            train_step(model, master, optimizer, tokens, keep, 2, 1., 'cpu')
+            for weight, parameter in zip(master, model.parameters()):
+                self.assertEqual(weight.dtype, torch.float32)
+                self.assertTrue(torch.equal(parameter, weight.to(torch.bfloat16)))
             path = Path(directory) / 'step.pt'
-            progress = {'step': 1, 'cursor': len(batch), 'epoch': 0, 'exposed_bytes': 13}
-            save_state(path, model, optimizer, progress, 'synthetic')
-            expected = update(model, optimizer, batch, 'cpu', 1.)
-            weights = {name: value.clone() for name, value in model.state_dict().items()}
-            restored = TinyPatcher().train()
-            restored_optimizer = torch.optim.AdamW(restored.parameters(), lr=.01)
-            self.assertEqual(restore_state(path, restored, restored_optimizer, 'synthetic'), progress)
-            actual = update(restored, restored_optimizer, batch, 'cpu', 1.)
-            self.assertEqual(expected, actual)
-            for name, value in restored.state_dict().items():
-                self.assertTrue(torch.equal(value, weights[name]), name)
+            progress = {'step': 1, 'stream': {'epoch': 0, 'offset': 9, 'next_target': 1, 'documents': 1}}
+            save_state(path, names, master, optimizer, progress, 'synthetic')
+            expected = train_step(model, master, optimizer, tokens, keep, 2, 1., 'cpu')
+            weights = [value.clone() for value in master]
+            restored = TinyPatcher().to(torch.bfloat16).train()
+            restored_names, restored_master, restored_optimizer = setup(restored)
+            self.assertEqual(restore_state(path, restored, restored_names, restored_master, restored_optimizer,
+                                           'synthetic'), progress)
+            self.assertEqual(train_step(restored, restored_master, restored_optimizer, tokens, keep, 2, 1., 'cpu'), expected)
+            for value, weight in zip(restored_master, weights):
+                self.assertTrue(torch.equal(value, weight))
             with self.assertRaisesRegex(ValueError, 'contract mismatch'):
-                restore_state(path, restored, restored_optimizer, 'wrong')
+                restore_state(path, restored, restored_names, restored_master, restored_optimizer, 'wrong')
             with self.assertRaises(FileExistsError):
-                save_state(path, model, optimizer, progress, 'synthetic')
+                save_state(path, names, master, optimizer, progress, 'synthetic')
             with path.open('ab') as handle:
                 handle.write(b'corruption')
             with self.assertRaisesRegex(ValueError, 'file hash mismatch'):
-                restore_state(path, restored, restored_optimizer, 'synthetic')
-        model.eval()
-        item = batch[0]
+                restore_state(path, restored, restored_names, restored_master, restored_optimizer, 'synthetic')
+            results = []
+            for micro_batch in (1, len(tokens)):
+                torch.manual_seed(11)
+                model = TinyPatcher(dropout=0.).train()
+                names, master, optimizer = setup(model)
+                results.append((train_step(model, master, optimizer, tokens, keep, micro_batch, 1., 'cpu'),
+                                [value.clone() for value in master]))
+            self.assertAlmostEqual(results[0][0][0], results[1][0][0], places=3)
+            for one, many in zip(results[0][1], results[1][1]):
+                torch.testing.assert_close(one, many, rtol=1e-5, atol=1e-6)
+
+    def test_real_patcher_packed_logits_match_each_isolated_segment_for_both_backends(self):
+        """Stacked windows reach beyond one window, so compare with the whole in-sequence segment prefix."""
+        from transformers.models.blt.configuration_blt import BltPatcherConfig
+        from blt_hf.patched.modeling_blt import BltPatcher
+        window = 8
+        config = BltPatcherConfig(vocab_size=260, hidden_size=32, num_hidden_layers=2, num_attention_heads=4,
+                                  intermediate_size=64, max_position_embeddings=256)
+        config.attention_mode = 'osc'
+        config.original_spec = {'entropy_sliding_window': window, 'eos_id': 2}
+        config._attn_implementation = 'eager'
+        torch.manual_seed(5)
+        model = BltPatcher(config).float().eval()
+        with tempfile.TemporaryDirectory() as directory:
+            tokens, keep = self.packed(directory, random_texts(9, 20, 30), window=window)
+        inputs = torch.from_numpy(tokens[:, :-1])
         with torch.no_grad():
-            total, _, count = loss_sums(model, item, 'cpu')
-            logits = model(torch.tensor([item['inputs']]))[2][0]
-            direct = torch.nn.functional.cross_entropy(logits, torch.tensor(item['targets']), reduction='sum')
-            torch.testing.assert_close(total, direct, rtol=1e-6, atol=1e-6)
-            self.assertEqual(count, len(item['targets']))
+            eager = model(input_ids=inputs, use_cache=False)[2]
+            config._attn_implementation = 'sdpa'
+            sdpa = model(input_ids=inputs, use_cache=False)[2]
+            config._attn_implementation = 'eager'
+            torch.testing.assert_close(sdpa, eager, rtol=1e-4, atol=1e-5)
+            checked = 0
+            for row in range(len(tokens)):
+                for position in numpy.flatnonzero(keep[row]):
+                    start = segment_start(tokens[row], position)
+                    if position == start:
+                        continue
+                    alone = model(input_ids=torch.from_numpy(tokens[row, start:position + 1])[None], use_cache=False)[2]
+                    torch.testing.assert_close(eager[row, position], alone[0, -1], rtol=1e-4, atol=1e-5)
+                    checked += 1
+        self.assertGreater(checked, 100)
+
+    @unittest.skipUnless(torch is not None and torch.cuda.is_available(), 'Flex attention check needs CUDA')
+    def test_flex_window_block_mask_matches_dense_osc_mask_and_gradients(self):
+        from transformers.models.blt.configuration_blt import BltPatcherConfig
+        from blt_hf.patched.modeling_blt import BltPatcher
+        from blt_hf.entropy_train import patcher_logits
+        config = BltPatcherConfig(vocab_size=260, hidden_size=64, num_hidden_layers=2, num_attention_heads=4,
+                                  intermediate_size=128, max_position_embeddings=1024)
+        config.attention_mode = 'osc'
+        config.original_spec = {'entropy_sliding_window': 64, 'eos_id': 2}
+        torch.manual_seed(13)
+        model = BltPatcher(config).float().cuda().train()
+        with tempfile.TemporaryDirectory() as directory:
+            tokens, _ = self.packed(directory, random_texts(17, 40, 200), length=512, window=64)
+        ids = torch.from_numpy(tokens[:, :-1]).cuda()
+        results = []
+        for backend in ('eager', 'flex_attention'):
+            model.config._attn_implementation = backend
+            model.zero_grad(set_to_none=True)
+            logits = patcher_logits(model, ids)
+            logits.float().square().mean().backward()
+            results.append((logits.detach(), [value.grad.clone() for value in model.parameters()]))
+        torch.testing.assert_close(results[1][0], results[0][0], rtol=1e-3, atol=1e-4)
+        for flex, eager in zip(results[1][1], results[0][1]):
+            torch.testing.assert_close(flex, eager, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':

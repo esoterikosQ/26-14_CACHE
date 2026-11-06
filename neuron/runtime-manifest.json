@@ -5,8 +5,8 @@
   "provenance": "Initial reference import from phdq3 plus new entropy code. Maintained only in blt-cache/neuron/runtime; phdq3 is read-only reference, not an export source. Per-file hashes identify this runtime, not the historical reference commit alone.",
   "files": {
     "blt_hf/__init__.py": "4981c134e251b71df4d0b14388007d103ca98567a13ea544e54bf532797424a8",
-    "blt_hf/entropy_data.py": "4974afe32d8ef491347a4c262e3b5a4d5e97bd055f0697decc7883aa4ca086fa",
-    "blt_hf/entropy_train.py": "2c3ee11e5662fcda76c62f043d1678456990193968a341f53622ce713a27b3ac",
+    "blt_hf/entropy_data.py": "d04365bc4bcc440816bb2eb1919395ab48ea181e052bb6fcfef857dda7bf4d38",
+    "blt_hf/entropy_train.py": "7b3a1e17382897cf78cfa4b80c57a256a5e2cb06a3575c2e6ef1286766bf8910",
     "blt_hf/entropy_corpus.py": "b101a696c84b01570da1c61cf5bd340c840162a28de9154e616ef9e1d5c2aa13",
     "blt_hf/entropy_fineweb.py": "2001d15104f8e08846514f1a0b5b4b5a79e5ec2c20ba9c9028c3f884c379b8a3",
     "blt_hf/entropy_combine.py": "a74cf983ac3b5a744317d027f0f5a073ff05c899b6a69f814dfc18c5f152d66f",
@@ -21,10 +21,10 @@
     "blt_hf/patched/__init__.py": "ca61cf5b07d487894b00924fe9c7c669a57d5ed59bb7af76603e27cd6a949af6",
     "blt_hf/patched/modeling_blt.py": "61719aa2f0050ad4eb48eee9fbc941bd0de6f7110ccd528359cf096848302746",
     "blt_hf_checks/check_env.py": "16da3e0acfa254902bdf3df14cad0435dac4534a5260fd98e013ee41d4acd635",
-    "tests/test_hf_entropy.py": "35ae63abf163afd246fb63b12d21583e68efc2d2c72244de264aa5ed3474d29f",
+    "tests/test_hf_entropy.py": "c06fe3f08e94d704282ea93426d7f2aa1d6639f6edebe4c9ffe7f781ddb4dd29",
     "tests/test_hf_entropy_combine.py": "c8928d19c787de56274097a80aab5cf93b6934bd71e55dcfe23b483f15625ede",
     "tests/test_hf_training.py": "b831cc6d2dab79358e8cf9e89d2725e81267406170c1dc0e6b4fe86db2f6e950",
-    "plan/korean_entropy_preparation.json": "0ca3efd117d0587c93bd634356da1d069d037caddeef7d29d7ee2348f8f60636",
+    "plan/korean_entropy_preparation.json": "19a7d3d8e832d0b5d5815fa7560629b5322d5cf27c3f747c6da61d6df42d2333",
     "plan/nikl_sources.json": "2cd8cb49225779165174e929a51d0fe1c274882284ad21b945cc237f1ef4ae72"
   }
 }

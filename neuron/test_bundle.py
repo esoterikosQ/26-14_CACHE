@@ -58,8 +58,10 @@ class BundleContracts(unittest.TestCase):
             self.check()
         self.config.update(training_authorized=True, max_seconds=1800)
         self.assertEqual(self.check(), 'pilot')
-        self.config['max_seconds'] = 7100
-        with self.assertRaisesRegex(ValueError, '15 minutes'):
+        self.config['max_seconds'] = 30 * 86400
+        self.assertEqual(self.check(), 'pilot')
+        self.now = datetime(2026, 10, 29, 9, 40, tzinfo=timezone.utc)
+        with self.assertRaisesRegex(ValueError, '30 minutes'):
             self.check()
 
     def test_allocation_paths_and_comment_fail_closed(self):
