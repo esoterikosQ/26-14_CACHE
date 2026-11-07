@@ -28,5 +28,6 @@
   "plateau_patience": 3,
   "plateau_min_delta": 0.002,
   "decay_fraction": 0.1,
-  "min_decay_steps": 5000
+  "min_decay_steps": 5000,
+  "compile": true
 }

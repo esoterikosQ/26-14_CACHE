@@ -143,7 +143,7 @@ class Batches:
         self.stream.close()
 
 
-def window_block_mask(ids, window, eos_id=2):
+def window_block_mask(ids, window, eos_id=2, compiled=False):
     """The osc patcher mask (causal, same EOS segment, distance < window) as a sparse flex BlockMask."""
     from torch.nn.attention.flex_attention import create_block_mask
     from .attention import segment_ids
@@ -152,7 +152,15 @@ def window_block_mask(ids, window, eos_id=2):
     def visible(batch, head, query, key):
         return (key <= query) & (query - key < window) & (segments[batch, query] == segments[batch, key])
 
-    return create_block_mask(visible, ids.shape[0], None, ids.shape[1], ids.shape[1], device=ids.device)
+    return create_block_mask(visible, ids.shape[0], None, ids.shape[1], ids.shape[1], device=ids.device,
+                             _compile=compiled)
+
+
+def compile_patcher(model):
+    """In-place compile keeps parameter names, so checkpoints match the uncompiled model."""
+    for module in (*model.layers, model.norm, model.lm_head):
+        module.compile()
+    model.compiled = True
 
 
 def patcher_logits(model, ids):
@@ -164,7 +172,7 @@ def patcher_logits(model, ids):
     spec = config.original_spec
     hidden = model.embed_tokens(ids)
     embeddings = model.rotary_emb(hidden, torch.arange(ids.shape[1], device=ids.device)[None])
-    mask = window_block_mask(ids, spec['entropy_sliding_window'], spec['eos_id'])
+    mask = window_block_mask(ids, spec['entropy_sliding_window'], spec['eos_id'], getattr(model, 'compiled', False))
     for layer in model.layers:
         hidden = layer(hidden, position_embeddings=embeddings, attention_mask=mask)
     return model.lm_head(model.norm(hidden))
@@ -303,6 +311,10 @@ def preflight(config):
         blockers.append('sequence_length must stay within 1024..8192 (model positions)')
     if config.get('attention_backend') not in ('eager', 'sdpa', 'flex_attention'):
         blockers.append('attention_backend must be eager, sdpa or flex_attention')
+    if config.get('compile') not in (True, False):
+        blockers.append('compile must be true or false')
+    elif config['compile'] and config.get('attention_backend') != 'flex_attention':
+        blockers.append('compile requires attention_backend flex_attention')
     for key in ('lr', 'clip_norm'):
         if not isinstance(config.get(key), (int, float)) or not math.isfinite(config[key]) or config[key] <= 0:
             blockers.append(f'positive finite {key} required')
@@ -356,6 +368,8 @@ def run(config, resume=None, stop_after_steps=None):
         raise ValueError('Approved GPU budget must leave space for the CUDA runtime')
     torch.cuda.set_per_process_memory_fraction(config['max_gpu_memory_bytes'] / available, device=0)
     model = load_patcher(config['model_path'], config['attention_backend']).to('cuda').train()
+    if config['compile']:
+        compile_patcher(model)
     context = model.config.original_spec['entropy_sliding_window']
     names = [name for name, _ in model.named_parameters()]
     master = [parameter.detach().float().clone().requires_grad_(True) for parameter in model.parameters()]

@@ -179,7 +179,7 @@ class EntropyDataContracts(unittest.TestCase):
                 config['max_steps'] = 10000
                 self.assertEqual(preflight(config)['blockers'], ['max_steps must exceed warmup_steps + min_decay_steps'])
                 config.update(max_steps=20000, sequence_length=512, attention_backend='flash')
-                self.assertEqual(len(preflight(config)['blockers']), 2)
+                self.assertEqual(len(preflight(config)['blockers']), 3)
 
     def test_preflight_stays_blocked_without_data_and_budgets(self):
         from blt_hf.entropy_train import preflight
@@ -752,26 +752,32 @@ class EntropyOptimizerContracts(unittest.TestCase):
     def test_flex_window_block_mask_matches_dense_osc_mask_and_gradients(self):
         from transformers.models.blt.configuration_blt import BltPatcherConfig
         from blt_hf.patched.modeling_blt import BltPatcher
-        from blt_hf.entropy_train import patcher_logits
+        from blt_hf.entropy_train import compile_patcher, patcher_logits
         config = BltPatcherConfig(vocab_size=260, hidden_size=64, num_hidden_layers=2, num_attention_heads=4,
                                   intermediate_size=128, max_position_embeddings=1024)
         config.attention_mode = 'osc'
         config.original_spec = {'entropy_sliding_window': 64, 'eos_id': 2}
         torch.manual_seed(13)
         model = BltPatcher(config).float().cuda().train()
+        names = [name for name, _ in model.named_parameters()]
         with tempfile.TemporaryDirectory() as directory:
             tokens, _ = self.packed(directory, random_texts(17, 40, 200), length=512, window=64)
         ids = torch.from_numpy(tokens[:, :-1]).cuda()
         results = []
-        for backend in ('eager', 'flex_attention'):
-            model.config._attn_implementation = backend
+        for backend in ('eager', 'flex_attention', 'compiled'):
+            if backend == 'compiled':
+                compile_patcher(model)
+            else:
+                model.config._attn_implementation = backend
             model.zero_grad(set_to_none=True)
             logits = patcher_logits(model, ids)
             logits.float().square().mean().backward()
             results.append((logits.detach(), [value.grad.clone() for value in model.parameters()]))
-        torch.testing.assert_close(results[1][0], results[0][0], rtol=1e-3, atol=1e-4)
-        for flex, eager in zip(results[1][1], results[0][1]):
-            torch.testing.assert_close(flex, eager, rtol=1e-3, atol=1e-5)
+        for other in results[1:]:
+            torch.testing.assert_close(other[0], results[0][0], rtol=1e-3, atol=1e-4)
+            for flex, eager in zip(other[1], results[0][1]):
+                torch.testing.assert_close(flex, eager, rtol=1e-3, atol=1e-5)
+        self.assertEqual([name for name, _ in model.named_parameters()], names)
 
 
 if __name__ == '__main__':
