@@ -1,0 +1,83 @@
+==========================================
+SLURM_JOB_ID = 970535
+SLURM_NODELIST = gpu56
+==========================================
+Runtime verified: 22 files
+SLURM contract verified: pilot
+{
+  "schema_version": 1,
+  "created_at": "2026-11-07T08:42:01.027616+00:00",
+  "hostname": "gpu56",
+  "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+  "python": "3.11.16",
+  "python_executable": "/home01/r984a02/.conda/envs/phdq_blt_hf/bin/python",
+  "scope": "gpu_runtime",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.16.1",
+  "xformers": null,
+  "safetensors": "0.8.0",
+  "huggingface_hub": "1.31.0",
+  "devices": [
+    {
+      "index": 0,
+      "name": "NVIDIA H200",
+      "capability": [
+        9,
+        0
+      ],
+      "total_memory": 150110011392,
+      "bf16_supported": true,
+      "bf16_smoke": true
+    }
+  ],
+  "errors": [],
+  "nvidia_smi": [
+    "NVIDIA H200, 580.105.08, 143771 MiB"
+  ],
+  "cuda_runtime": "12.8",
+  "blt_import": true,
+  "cuda_available": true,
+  "cuda_smoke": true,
+  "loaded_libcudart": [
+    "/scratch/r984a02/.conda/envs/phdq_blt_hf/lib/python3.11/site-packages/nvidia/cuda_runtime/lib/libcudart.so.12"
+  ],
+  "status": "pass"
+}
+{
+  "training_ready": true,
+  "blockers": [],
+  "dataset": {
+    "train": {
+      "documents": 59791622,
+      "utf8_bytes": 232722508043,
+      "path": "/scratch/r984a02/blt-cache/data/korean_cpt/prepared/korean-entropy-nikl-fineweb-native-v003/train.jsonl"
+    },
+    "validation": {
+      "documents": 609471,
+      "utf8_bytes": 2384020729,
+      "path": "/scratch/r984a02/blt-cache/data/korean_cpt/prepared/korean-entropy-nikl-fineweb-native-v003/validation.jsonl"
+    }
+  }
+}
+{"step": 1, "lr": 6e-08, "byte_bpb": 1.8673535717083118, "gradient_norm": 0.9486475586891174, "step_seconds": 55.20013918913901, "data_wait_seconds": 0.12605981063097715, "training_bytes_per_second": 8957.875963060822, "step_utf8_bytes": 494476, "trained_target_fraction": 0.9434452056884766, "exposed_bytes": 494476, "epoch": 0, "elapsed_seconds": 55.552584937773645, "peak_allocated_bytes": 67481157120}
+{"step": 2, "lr": 1.2e-07, "byte_bpb": 1.9066894674302235, "gradient_norm": 0.8947983384132385, "step_seconds": 1.7798690367490053, "data_wait_seconds": 2.899300307035446e-05, "training_bytes_per_second": 277127.6930020316, "step_utf8_bytes": 493251, "trained_target_fraction": 0.9410552978515625, "exposed_bytes": 987727, "epoch": 0, "elapsed_seconds": 57.38488519657403, "peak_allocated_bytes": 68278040064}
+{"step": 3, "lr": 1.8e-07, "byte_bpb": 1.7957336926861003, "gradient_norm": 0.9576948285102844, "step_seconds": 1.78014634270221, "data_wait_seconds": 1.1947005987167358e-05, "training_bytes_per_second": 277027.7859579863, "step_utf8_bytes": 493150, "trained_target_fraction": 0.9408779144287109, "exposed_bytes": 1480877, "epoch": 0, "elapsed_seconds": 59.16831384599209, "peak_allocated_bytes": 68278040064}
+{"step": 4, "lr": 2.4e-07, "byte_bpb": 1.8507416408191628, "gradient_norm": 0.9432621598243713, "step_seconds": 1.777962515130639, "data_wait_seconds": 1.2048520147800446e-05, "training_bytes_per_second": 277901.24695834506, "step_utf8_bytes": 494098, "trained_target_fraction": 0.9426670074462891, "exposed_bytes": 1974975, "epoch": 0, "elapsed_seconds": 60.94933791644871, "peak_allocated_bytes": 68278040064}
+{"step": 5, "lr": 3e-07, "byte_bpb": 1.8061718939532563, "gradient_norm": 1.0293874740600586, "step_seconds": 1.7793618347495794, "data_wait_seconds": 1.1016614735126495e-05, "training_bytes_per_second": 276974.5817715373, "step_utf8_bytes": 492838, "trained_target_fraction": 0.9402084350585938, "exposed_bytes": 2467813, "epoch": 0, "elapsed_seconds": 62.73195040039718, "peak_allocated_bytes": 68278040064}
+{"step": 6, "lr": 3.6e-07, "byte_bpb": 1.8204458912187402, "gradient_norm": 0.937957763671875, "step_seconds": 1.7799286656081676, "data_wait_seconds": 1.0766088962554932e-05, "training_bytes_per_second": 277049.30513690424, "step_utf8_bytes": 493128, "trained_target_fraction": 0.9406814575195312, "exposed_bytes": 2960941, "epoch": 0, "elapsed_seconds": 64.51592256594449, "peak_allocated_bytes": 68278040064}
+{"step": 7, "lr": 4.1999999999999995e-07, "byte_bpb": 1.8702764083578975, "gradient_norm": 0.9097915291786194, "step_seconds": 1.7868294138461351, "data_wait_seconds": 9.504146873950958e-06, "training_bytes_per_second": 275546.1692004567, "step_utf8_bytes": 492354, "trained_target_fraction": 0.9391956329345703, "exposed_bytes": 3453295, "epoch": 0, "elapsed_seconds": 66.30616738460958, "peak_allocated_bytes": 68278040064}
+{"step": 8, "lr": 4.8e-07, "byte_bpb": 1.8116256455198563, "gradient_norm": 0.9050858020782471, "step_seconds": 1.7806740757077932, "data_wait_seconds": 1.170765608549118e-05, "training_bytes_per_second": 277065.86327646434, "step_utf8_bytes": 493364, "trained_target_fraction": 0.9413375854492188, "exposed_bytes": 3946659, "epoch": 0, "elapsed_seconds": 68.09008128196001, "peak_allocated_bytes": 68278040064}
+{"step": 9, "lr": 5.399999999999999e-07, "byte_bpb": 1.8225915954507574, "gradient_norm": 0.8963270783424377, "step_seconds": 1.778839181177318, "data_wait_seconds": 8.302740752696991e-06, "training_bytes_per_second": 277143.09714817186, "step_utf8_bytes": 492993, "trained_target_fraction": 0.9405937194824219, "exposed_bytes": 4439652, "epoch": 0, "elapsed_seconds": 69.87228673510253, "peak_allocated_bytes": 68278040064}
+{"step": 10, "lr": 6e-07, "byte_bpb": 1.8232376119391336, "gradient_norm": 0.9198808073997498, "step_seconds": 1.7802711399272084, "data_wait_seconds": 7.721595466136932e-06, "training_bytes_per_second": 277376.2877604086, "step_utf8_bytes": 493805, "trained_target_fraction": 0.9421577453613281, "exposed_bytes": 4933457, "epoch": 0, "elapsed_seconds": 71.65573349036276, "peak_allocated_bytes": 68278040064}
+{"step": 11, "lr": 6.599999999999999e-07, "byte_bpb": 1.7500741881921353, "gradient_norm": 0.9740889668464661, "step_seconds": 1.7866232534870505, "data_wait_seconds": 1.345016062259674e-05, "training_bytes_per_second": 276245.7048718678, "step_utf8_bytes": 493547, "trained_target_fraction": 0.9415378570556641, "exposed_bytes": 5427004, "epoch": 0, "elapsed_seconds": 73.4455940341577, "peak_allocated_bytes": 68278040064}
+{"step": 12, "lr": 7.2e-07, "byte_bpb": 1.8250991312644276, "gradient_norm": 0.8691924810409546, "step_seconds": 1.785255371592939, "data_wait_seconds": 7.851049304008484e-06, "training_bytes_per_second": 277321.1092809901, "step_utf8_bytes": 495089, "trained_target_fraction": 0.9445762634277344, "exposed_bytes": 5922093, "epoch": 0, "elapsed_seconds": 75.23420440964401, "peak_allocated_bytes": 68278040064}
+{"step": 13, "lr": 7.799999999999999e-07, "byte_bpb": 1.8594404611013324, "gradient_norm": 0.8169092535972595, "step_seconds": 1.7838602075353265, "data_wait_seconds": 1.7935410141944885e-05, "training_bytes_per_second": 276112.4430711569, "step_utf8_bytes": 492546, "trained_target_fraction": 0.9396553039550781, "exposed_bytes": 6414639, "epoch": 0, "elapsed_seconds": 77.02180327754468, "peak_allocated_bytes": 68278040064}
+{"step": 14, "lr": 8.399999999999999e-07, "byte_bpb": 1.809210073052476, "gradient_norm": 0.9184102416038513, "step_seconds": 1.7841896321624517, "data_wait_seconds": 1.0316260159015656e-05, "training_bytes_per_second": 276320.964494379, "step_utf8_bytes": 493009, "trained_target_fraction": 0.9405994415283203, "exposed_bytes": 6907648, "epoch": 0, "elapsed_seconds": 78.8093407638371, "peak_allocated_bytes": 68278040064}
+{"step": 15, "lr": 9e-07, "byte_bpb": 1.8081247366937951, "gradient_norm": 0.9276808500289917, "step_seconds": 1.780898291617632, "data_wait_seconds": 8.393079042434692e-06, "training_bytes_per_second": 277206.7345584242, "step_utf8_bytes": 493677, "trained_target_fraction": 0.9418735504150391, "exposed_bytes": 7401325, "epoch": 0, "elapsed_seconds": 80.59410610888153, "peak_allocated_bytes": 68278040064}
+{"step": 16, "lr": 9.6e-07, "byte_bpb": 1.8835917644689544, "gradient_norm": 0.9198893904685974, "step_seconds": 1.7843161607161164, "data_wait_seconds": 8.624047040939331e-06, "training_bytes_per_second": 276838.27052362263, "step_utf8_bytes": 493967, "trained_target_fraction": 0.9424419403076172, "exposed_bytes": 7895292, "epoch": 0, "elapsed_seconds": 82.38157717511058, "peak_allocated_bytes": 68278040064}
+{"step": 17, "lr": 1.02e-06, "byte_bpb": 1.8568602025457608, "gradient_norm": 0.9000059366226196, "step_seconds": 1.7847953494638205, "data_wait_seconds": 8.001923561096191e-06, "training_bytes_per_second": 276275.37249474187, "step_utf8_bytes": 493095, "trained_target_fraction": 0.9408245086669922, "exposed_bytes": 8388387, "epoch": 0, "elapsed_seconds": 84.1695936601609, "peak_allocated_bytes": 68278040064}
+{"step": 18, "lr": 1.0799999999999998e-06, "byte_bpb": 1.8262004877478086, "gradient_norm": 0.7786256670951843, "step_seconds": 1.777593120932579, "data_wait_seconds": 8.022412657737732e-06, "training_bytes_per_second": 277556.20461737434, "step_utf8_bytes": 493382, "trained_target_fraction": 0.9412612915039062, "exposed_bytes": 8881769, "epoch": 0, "elapsed_seconds": 85.95059770997614, "peak_allocated_bytes": 68278040064}
+{"step": 19, "lr": 1.1399999999999999e-06, "byte_bpb": 1.8264706244066828, "gradient_norm": 0.8706879019737244, "step_seconds": 1.7779484447091818, "data_wait_seconds": 1.1436641216278076e-05, "training_bytes_per_second": 277715.5892620749, "step_utf8_bytes": 493764, "trained_target_fraction": 0.9419994354248047, "exposed_bytes": 9375533, "epoch": 0, "elapsed_seconds": 87.73206377308816, "peak_allocated_bytes": 68278040064}
+{"step": 20, "lr": 1.2e-06, "byte_bpb": 1.804958290422929, "gradient_norm": 0.8751498460769653, "step_seconds": 1.7773418836295605, "data_wait_seconds": 9.325332939624786e-06, "training_bytes_per_second": 277680.39708384196, "step_utf8_bytes": 493533, "trained_target_fraction": 0.9415607452392578, "exposed_bytes": 9869066, "epoch": 0, "elapsed_seconds": 89.5131034264341, "peak_allocated_bytes": 68278040064}
+{"event": "pilot-validation-00000050.json", "byte_bpb": 1.7819841936275382, "utf8_bytes": 19195793, "documents": 5000, "seconds": 27.504659018479288, "step": 50, "signature": "b8488751e3bb71bea8a7da1dac2b9e80c0e68d0ab07196463e3958cca12b053f"}
+{"status": "pilot", "checkpoint": "/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-20261106-01/step-00000050.pt", "step": 50}
