@@ -41,7 +41,7 @@ sbatch --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh"
 ```
 
 코드·데이터·출력과 sbatch 제출은 모두 `/scratch/r984a02/blt-cache`에서 한다.
-job은 `$BUNDLE/runtime`으로 이동하며 stdout/stderr는 프로젝트 절대경로에 기록한다.
+job은 `$BUNDLE/runtime`으로 이동하며 stdout/stderr는 `runtimelog/entropy-<jobid>.out`/`.err`에 기록한다.
 따라서 프로젝트 디렉터리를 먼저 준비해야 한다. 기존 홈 clone이나 실행 중 job은 자동 이동하지 않는다.
 
 `git rev-parse HEAD`가 인계받은 검증 commit과 일치하는지 확인한다. 실행/재개 중에는 clone을 갱신하지 않는다.

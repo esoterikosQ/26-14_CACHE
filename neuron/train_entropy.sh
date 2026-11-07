@@ -9,8 +9,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@600
 #SBATCH --comment="field=nlp;appl=pytorch"
-#SBATCH --output=/scratch/r984a02/blt-cache/entropy-%j.out
-#SBATCH --error=/scratch/r984a02/blt-cache/entropy-%j.err
+#SBATCH --output=/scratch/r984a02/blt-cache/runtimelog/entropy-%j.out
+#SBATCH --error=/scratch/r984a02/blt-cache/runtimelog/entropy-%j.err
 set -euo pipefail
 
 ROOT=/scratch/r984a02/blt-cache

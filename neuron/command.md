@@ -27,7 +27,7 @@ job 내부 작업 cwd는 `neuron/runtime`이며 제출 cwd와 독립적이다. �
 | 실행별 학습 설정 | `/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/<RUN_ID>.json` |
 | job 환경/preflight/설정 사본 | `/scratch/r984a02/blt-cache/artifacts/korean_entropy/neuron-<JOB_ID>-<RESTART>` |
 | 학습 checkpoint/metrics/validation | `/scratch/r984a02/blt-cache/outputs/korean_entropy/<RUN_ID>` |
-| SLURM stdout/stderr | `/scratch/r984a02/blt-cache/entropy-<JOB_ID>.out` 및 `.err` |
+| SLURM stdout/stderr | `/scratch/r984a02/blt-cache/runtimelog/entropy-<JOB_ID>.out` 및 `.err` |
 
 **원문과 가중치를 Git에 추가하지 않는다.** 프로젝트 내 `data/`, `artifacts/`, `outputs/`는
 Git 제외 경로다. 로그 전달도 아래의 검토한 `runtimelog`만 stage한다. 기존 `data/Preprocessed`, `data/Raw`,
@@ -483,8 +483,8 @@ job이 끝난 뒤 확인하며 `validation-*.json`이 없으면 검증 완료를
 
 ```bash
 sacct -j JOB_NUMBER --format=JobID,State,ExitCode,Elapsed,MaxRSS
-tail -n 40 entropy-JOB_NUMBER.out
-tail -n 40 entropy-JOB_NUMBER.err
+tail -n 40 runtimelog/entropy-JOB_NUMBER.out
+tail -n 40 runtimelog/entropy-JOB_NUMBER.err
 find outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01 -maxdepth 1 -type f -print
 cat outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/metrics.jsonl
 cat outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/validation-00000002.json
@@ -527,8 +527,8 @@ sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r98
 squeue -u r984a02
 scontrol show job JOB_NUMBER
 sacct -j JOB_NUMBER --format=JobID,State,ExitCode,Elapsed,MaxRSS
-tail -n 40 entropy-JOB_NUMBER.out
-tail -n 40 entropy-JOB_NUMBER.err
+tail -n 40 runtimelog/entropy-JOB_NUMBER.out
+tail -n 40 runtimelog/entropy-JOB_NUMBER.err
 ```
 
 학습 실행기가 시작되어 metrics가 기록되는 상태에서 저장 후 중단을 요청한다.
@@ -545,70 +545,16 @@ scancel --signal=USR1 --batch JOB_NUMBER
 ## 11. GitHub를 통한 결과 전달
 
 전달 경로는 **Neuron의 runtimelog → GitHub push → 로컬 pull → 결과 분석**이다.
-Neuron의 실행과 업로드는 모두 사용자가 직접 수행한다. 실패 로그도 보존하며,
-비밀정보·개인정보·원문이 출력된 부분은 제거한 사본만 올린다.
-가중치/checkpoint/토큰은 Git에 올리지 않는다. 기존 Neuron 출력 경로는 변경하지 않는다.
+Slurm job의 `.out`/`.err`는 처음부터 `runtimelog/entropy-<JOB_ID>.out`/`.err`로 기록된다.
+preflight 보고서, 학습 step(처음 20개와 100 step마다), 검증 결과, 종료 상태가 모두 `.out`에 있다.
+따로 복사할 파일은 없다. 가중치/checkpoint/원문/토큰은 Git에 올리지 않는다.
 
-### Neuron: 실행 결과 모으기
-
-별도 clone 없이 현재 blt-cache의 `runtimelog`에 검토한 로그를 넣는다.
-아래는 완료한 환경 검사953179의 예시다. 새 job은 번호와 디렉터리 이름을 직접 바꾼다.
-재queue된 job은 보고서 경로의 restart 번호도 실제 값으로 바꾼다.
+`blt-cache`에서 실행한다. `git add .`는 쓰지 않는다. 충돌이나 거부가 나면 강제 push하지 않는다.
 
 ```bash
-git sparse-checkout add runtimelog
-mkdir -p runtimelog
-mkdir runtimelog/preflight-953179-0
-```
-
-마지막 mkdir가 실패하면 기존 결과를 덮어쓰지 말고 새 이름을 정한다.
-아래 파일이 실제로 있는지 확인한 뒤 복사한다. 원본은 그대로 보존한다.
-
-```bash
-cp -n entropy-953179.out entropy-953179.err runtimelog/preflight-953179-0/
-cp -n artifacts/korean_entropy/neuron-953179-0/{environment.json,preflight.json,config.json,runtime-manifest.json} \
-  runtimelog/preflight-953179-0/
-sacct -j 953179 --format=JobID,State,ExitCode,Elapsed,MaxRSS \
-  > runtimelog/preflight-953179-0/slurm-status.txt
-find runtimelog/preflight-953179-0 -maxdepth 1 -type f -print
-du -sh runtimelog/preflight-953179-0
-```
-
-파일럿/학습 결과라면 별도 새 로그 디렉터리에 해당 실행의 `contract.json`, `metrics.jsonl`,
-`validation-*.json`도 복사한다. `.pt`, `.safetensors`,원문은 복사하지 않는다.
-이미 원본 .out/.err를 runtimelog 최상위에 올린 기존 결과는 그대로 보존한다.
-
-**파일 내용을 직접 확인하고 민감정보를 제거한 뒤에만** 다음 단계로 진행한다.
-공유 크기가 크면 필요한 로그 구간/요약을 남기고 원본은 Neuron에 보존한다.
-다른 실행을 묶지 않도록 config.json/contract.json의 run_dir도 대조한다.
-
-### Neuron: 검토한 결과만 commit/push
-
-기존 staged 변경이 있으면 먼저 그 작업을 정리한다. `git add .`는 사용하지 않는다.
-
-```bash
-git status --short --branch
-git diff --cached --name-only
-git add -- runtimelog/preflight-953179-0
-git diff --cached --stat
-git diff --cached -- runtimelog/preflight-953179-0
-```
-
-staged 목록이 해당 결과만 포함하는 것을 확인한 뒤 commit한다.
-
-```bash
-git commit -m "Record Neuron preflight 953179"
-```
-
-이 clone을 사용하는 job이 모두 끝난 뒤 원격 변경을 합치고 현재 커밋을 올린다.
-`HEAD:main`은 detached HEAD에서도 방금 만든 로그 커밋을 올린다. 오래된 로컬 main을 지정하지 않는다.
-토큰은 명령/URL/로그에 넣지 않는다. 충돌이나 거부가 나면 강제 push하지 않는다.
-
-```bash
-git fetch origin &&
-git merge --no-edit origin/main &&
-git push origin HEAD:main
-git rev-parse HEAD
+git add runtimelog
+git commit -m "Neuron logs"
+git fetch origin && git merge --no-edit origin/main && git push origin HEAD:main
 ```
 
 ### 로컬: GitHub에서 결과 받기

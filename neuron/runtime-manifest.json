@@ -6,7 +6,7 @@
   "files": {
     "blt_hf/__init__.py": "4981c134e251b71df4d0b14388007d103ca98567a13ea544e54bf532797424a8",
     "blt_hf/entropy_data.py": "d04365bc4bcc440816bb2eb1919395ab48ea181e052bb6fcfef857dda7bf4d38",
-    "blt_hf/entropy_train.py": "7b3a1e17382897cf78cfa4b80c57a256a5e2cb06a3575c2e6ef1286766bf8910",
+    "blt_hf/entropy_train.py": "b89d0c66844359d2086024198910e115af757d1f066c6237319dddc6d3b597a1",
     "blt_hf/entropy_corpus.py": "b101a696c84b01570da1c61cf5bd340c840162a28de9154e616ef9e1d5c2aa13",
     "blt_hf/entropy_fineweb.py": "2001d15104f8e08846514f1a0b5b4b5a79e5ec2c20ba9c9028c3f884c379b8a3",
     "blt_hf/entropy_combine.py": "a74cf983ac3b5a744317d027f0f5a073ff05c899b6a69f814dfc18c5f152d66f",

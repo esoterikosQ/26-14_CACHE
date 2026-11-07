@@ -462,7 +462,9 @@ def run(config, resume=None, stop_after_steps=None):
                          'peak_allocated_bytes': torch.cuda.max_memory_allocated()}
                 with (root / 'metrics.jsonl').open('a') as handle:
                     handle.write(json.dumps(event) + '\n')
-                print(json.dumps(event), flush=True)
+                # Slurm stdout is committed to Git; metrics.jsonl keeps every step.
+                if progress['step'] <= 20 or progress['step'] % 100 == 0:
+                    print(json.dumps(event), flush=True)
                 if event['peak_allocated_bytes'] > config['max_gpu_memory_bytes']:
                     raise ValueError('GPU memory budget exceeded')
                 if progress['step'] % config['save_every'] == 0:
