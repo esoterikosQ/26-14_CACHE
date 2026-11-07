@@ -14,11 +14,11 @@
 set -euo pipefail
 
 ROOT=/scratch/r984a02/blt-cache
-SUBMIT_ROOT=/scratch/r984a02
+SUBMIT_ROOT="$ROOT"
 : "${BUNDLE:?Set BUNDLE to the absolute neuron directory from the pinned Git checkout}"
 : "${CONFIG:?Set CONFIG to an absolute reviewed JSON config path}"
 [[ "$BUNDLE" = /* && "$CONFIG" = /* ]] || { printf '%s\n' 'Absolute BUNDLE and CONFIG required' >&2; exit 2; }
-[[ "${SLURM_SUBMIT_DIR:-}" = "$SUBMIT_ROOT" && -n "${SLURM_JOB_ID:-}" ]] || { printf '%s\n' 'Submit with sbatch from /scratch/r984a02' >&2; exit 2; }
+[[ "${SLURM_SUBMIT_DIR:-}" = "$SUBMIT_ROOT" && -n "${SLURM_JOB_ID:-}" ]] || { printf '%s\n' 'Submit with sbatch from /scratch/r984a02/blt-cache' >&2; exit 2; }
 if [[ -z "${CONDA_SH:-}" && -n "${CONDA_EXE:-}" ]]; then
     CONDA_SH="${CONDA_EXE%/bin/conda}/etc/profile.d/conda.sh"
 fi

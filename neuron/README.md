@@ -8,7 +8,7 @@
 
 ## 배포 범위
 
-- `train_entropy.sh`: 기존 `phdq3/scripts`의 partition/CPU-GPU 비율/환경/comment 정책을 참조한 entropy 전용1GPU job. 제출 cwd는 사용자 확인 조건인 `/scratch/r984a02`이며 참조 코드의 프로젝트-root 제출 검사는 따르지 않는다.
+- `train_entropy.sh`: 기존 `phdq3/scripts`의 partition/CPU-GPU 비율/환경/comment 정책을 참조한 entropy 전용1GPU job. 제출 cwd는 프로젝트 루트 `/scratch/r984a02/blt-cache`다(2026-11-07 사용자 결정).
 - `runtime/`: blt-cache에서 직접 관리하는 실행 코드·테스트·설정. phdq3는 최초 코드/정책을 참고한 읽기 전용 프로젝트다.
 - `runtime-manifest.json`: 참조 이력과 현재 파일SHA256. 과거 참조 commit만으로 현재 구현을 재현했다고 주장하지 않는다.
 - `bundle.py`: 무결성/SLURM 승인 검사. 변경은 이 저장소에서만 하고,검사 후 `python neuron/bundle.py refresh`로 manifest를 갱신한다. 참조 프로젝트 export는 하지 않는다.
@@ -37,11 +37,10 @@ mkdir -p artifacts/korean_entropy outputs/korean_entropy
 export CONFIG="$BUNDLE/entropy.template.json"
 showque
 showappl
-cd /scratch/r984a02
 sbatch --export=ALL,MODE=preflight "$BUNDLE/train_entropy.sh"
 ```
 
-코드·데이터·출력은 `/scratch/r984a02/blt-cache`에 두고 제출만 부모에서 한다.
+코드·데이터·출력과 sbatch 제출은 모두 `/scratch/r984a02/blt-cache`에서 한다.
 job은 `$BUNDLE/runtime`으로 이동하며 stdout/stderr는 프로젝트 절대경로에 기록한다.
 따라서 프로젝트 디렉터리를 먼저 준비해야 한다. 기존 홈 clone이나 실행 중 job은 자동 이동하지 않는다.
 
@@ -70,14 +69,13 @@ NIKL paragraph/utterance JSON을 지원한다. 실제 수령 schema 확인과 �
 승인 후 template을 `/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/`의 새 설정 경로로 복사하고 `CONFIG`를 그 절대경로로 지정한다.
 `dataset_manifest`,고유 `run_dir`,`max_steps`,`max_train_bytes`,`max_seconds`,
 `max_run_bytes`,`max_gpu_memory_bytes`,승인 여부를 확정한다. 양의 값만 허용한다.
-GPU 상한은 실제 장치 메모리보다 작아야 하며 `max_seconds`는 남은 job 시간보다 최소15분 짧아야 한다.
+GPU 상한은 실제 장치 메모리보다 작아야 한다. `max_seconds`는 여러 job에 걸친 누적 상한이고, 각 job은 종료10분 전 SIGUSR1로 저장 후 멈춘다(job은 최소30분 남아야 한다).
 고정 공개 entropy revision의 변환본을 `artifacts/converted/blt-1b-hf-own`에 사용자가 준비한다.
 새 프로젝트 경로에 가중치가 이미 있다고 가정하지 않는다. 기존 phdq3 가중치를 자동 이동/덮어쓰기하지 않는다.
 preflight와 학습 job은 설정 사본을 자체 보고서 디렉터리에 보존한다.
 
 ```bash
-# 승인된 CONFIG를 지정한 뒤 사용자만 실행. 최초에는2step 파일럿.
-cd /scratch/r984a02
+# 승인된 CONFIG를 지정한 뒤 /scratch/r984a02/blt-cache에서 사용자만 실행.
 sbatch --export=ALL,MODE=pilot,PILOT_STEPS=2 "$BUNDLE/train_entropy.sh"
 # 같은 설정/자료/런타임/장치와 신뢰 가능한 체크포인트로 명시적 재개.
 export RESUME=/scratch/r984a02/blt-cache/outputs/korean_entropy/<run>/step-00000002.pt

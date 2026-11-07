@@ -10,7 +10,7 @@ import subprocess
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path('/scratch/r984a02/blt-cache')
-SUBMIT_ROOT = Path('/scratch/r984a02')
+SUBMIT_ROOT = ROOT
 FILES = (
     'blt_hf/__init__.py', 'blt_hf/entropy_data.py', 'blt_hf/entropy_train.py',
     'blt_hf/entropy_corpus.py', 'blt_hf/entropy_fineweb.py',

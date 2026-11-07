@@ -9,15 +9,14 @@ NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전�
 
 ## 1. 저장 경로
 
-제출 cwd는 `/scratch/r984a02`, 프로젝트 루트는 `/scratch/r984a02/blt-cache`다.
-처음 clone할 때를 제외한 Neuron 명령은 `blt-cache`에서 시작한다.
-제출할 때만 `cd ..`로 부모에 이동하고 제출 후 `cd blt-cache`로 돌아온다.
+프로젝트 루트이자 sbatch 제출 cwd는 `/scratch/r984a02/blt-cache`다.
+처음 clone할 때를 제외한 모든 Neuron 명령과 sbatch 제출은 이 디렉터리에서 한다. 디렉터리를 옮기지 않는다.
 실행기가 요구하는 경로·모드는 sbatch 인자에 직접 적는다. 사전 변수 설정은 필요 없다.
 job 내부 작업 cwd는 `neuron/runtime`이며 제출 cwd와 독립적이다. 아래 경로는 모두 Neuron 경로다.
 
 | 용도 | 절대 경로 |
 | --- | --- |
-| sbatch 제출 cwd | `/scratch/r984a02` |
+| sbatch 제출 cwd | `/scratch/r984a02/blt-cache` |
 | GitHub 코드 사본 | `/scratch/r984a02/blt-cache` |
 | 실행 bundle | `/scratch/r984a02/blt-cache/neuron` |
 | NIKL 수령 원본 ZIP/JSON | `/scratch/r984a02/blt-cache/data/korean_cpt/incoming/nikl` |
@@ -116,10 +115,8 @@ printf '%s\n' READY
 이후 모든 sbatch도 같은 제출 cwd를 사용한다.
 
 ```bash
-cd ..
 sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r984a02/blt-cache/neuron/entropy.template.json,MODE=preflight,RESUME= \
-    blt-cache/neuron/train_entropy.sh
-cd blt-cache
+    neuron/train_entropy.sh
 ```
 
 sbatch가 출력한 job 번호를 다음 명령에 직접 적는다. 아래 `953179`는 이미 수신한 환경 검사
@@ -467,10 +464,8 @@ GPU 예산은 실제 VRAM보다 작게, threads는 할당 CPU 이하로 지정�
 실제 전체 자료 hash/중복 검사가 포함되므로 로그인 노드에서 직접 실행하지 않는다.
 
 ```bash
-cd ..
 sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/ko-entropy-h200-pilot-20261029-01.json,MODE=preflight,RESUME= \
-    blt-cache/neuron/train_entropy.sh
-cd blt-cache
+    neuron/train_entropy.sh
 ```
 
 ## 8. 최초 2step 파일럿
@@ -479,10 +474,8 @@ cd blt-cache
 기본2시간 할당이 부족하면 site 정책과 승인 예산 안에서 `--time`을 지정한다. 자동 확대하지 않는다.
 
 ```bash
-cd ..
 sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/ko-entropy-h200-pilot-20261029-01.json,MODE=pilot,PILOT_STEPS=2,RESUME= \
-    blt-cache/neuron/train_entropy.sh
-cd blt-cache
+    neuron/train_entropy.sh
 ```
 
 sbatch가 출력한 번호로4절처럼 squeue/sacct를 확인한다. 아래 `JOB_NUMBER`는 그 실제 번호로 바꾼다.
@@ -510,15 +503,8 @@ checkpoint 파일명은 실제 완료 step에 맞춘다. 아래는2step 완료�
 test -r outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000002.pt &&
 test -r outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000002.sha256 &&
 test ! -e outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/.active &&
-cd .. &&
 sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/ko-entropy-h200-pilot-20261029-01.json,MODE=pilot,PILOT_STEPS=2,RESUME=/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000002.pt \
-    blt-cache/neuron/train_entropy.sh
-```
-
-제출 단계까지 갔다면 `cd blt-cache`로 돌아온다. 사전 검사에서 중단됐으면 이동하지 않는다.
-
-```bash
-cd blt-cache
+    neuron/train_entropy.sh
 ```
 
 재개 파일럿이 총4step까지 완료했으며 실제 GPU 재개 검토와 본 학습 승인이 끝난 경우에만,
@@ -528,12 +514,9 @@ cd blt-cache
 test -r outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000004.pt &&
 test -r outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000004.sha256 &&
 test ! -e outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/.active &&
-cd .. &&
 sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/ko-entropy-h200-pilot-20261029-01.json,MODE=train,RESUME=/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-pilot-20261029-01/step-00000004.pt \
-    blt-cache/neuron/train_entropy.sh
+    neuron/train_entropy.sh
 ```
-
-제출 단계까지 갔다면 `cd blt-cache`로 돌아온다. 사전 검사에서 중단됐으면 이동하지 않는다.
 
 외부 checkpoint는 torch pickle 위험 때문에 사용하지 않는다. `.active`가 남으면 실행 중
 프로세스가 없는지 먼저 확인하고 별도 복구 판단을 한다. 자동 삭제·최신 checkpoint 자동 선택은 하지 않는다.

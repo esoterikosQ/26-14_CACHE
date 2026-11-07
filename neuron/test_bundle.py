@@ -23,9 +23,9 @@ class BundleContracts(unittest.TestCase):
 
     def test_reference_project_is_not_a_submission_or_output_root(self):
         self.assertEqual(ROOT, Path('/scratch/r984a02/blt-cache'))
-        self.assertEqual(SUBMIT_ROOT, Path('/scratch/r984a02'))
+        self.assertEqual(SUBMIT_ROOT, ROOT)
         self.assertEqual(self.check(), 'preflight')
-        for directory in (str(ROOT), '/scratch/r984a02/phdq3'):
+        for directory in ('/scratch/r984a02', '/scratch/r984a02/phdq3', str(ROOT / 'neuron')):
             self.env['SLURM_SUBMIT_DIR'] = directory
             with self.assertRaisesRegex(ValueError, 'Submit directory'):
                 self.check()
@@ -39,13 +39,13 @@ class BundleContracts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             environment = {'BUNDLE': '/unused/bundle', 'CONFIG': '/unused/config.json',
                            'CONDA_SH': str(Path(directory) / 'missing.sh'), 'SLURM_JOB_ID': '123'}
-            for submit_dir in (str(SUBMIT_ROOT), str(ROOT), '/scratch/r984a02/phdq3'):
+            for submit_dir in (str(SUBMIT_ROOT), '/scratch/r984a02', '/scratch/r984a02/phdq3'):
                 environment['SLURM_SUBMIT_DIR'] = submit_dir
                 result = subprocess.run(['/bin/bash', str(script)], env=environment,
                                         capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2)
                 expected = ('Existing conda activation script missing' if submit_dir == str(SUBMIT_ROOT)
-                            else 'Submit with sbatch from /scratch/r984a02')
+                            else 'Submit with sbatch from /scratch/r984a02/blt-cache')
                 self.assertIn(expected, result.stderr)
 
     def test_default_preflight_and_explicit_training_gates(self):
