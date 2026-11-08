@@ -98,13 +98,28 @@ def validate_job(config, environment, job_details, root=ROOT, now=None):
     return mode
 
 
+def latest_checkpoint(run_dir):
+    """Newest completed rolling checkpoint (its .sha256 is written last) of an idle run."""
+    run_dir = Path(run_dir)
+    if (run_dir / '.active').exists():
+        raise ValueError(f'Run is active or was killed without cleanup: {run_dir}/.active')
+    complete = [path for path in sorted(run_dir.glob('step-*.pt')) if path.with_suffix('.sha256').is_file()]
+    if not complete:
+        raise ValueError(f'No completed checkpoint in {run_dir}')
+    return complete[-1]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('refresh', 'verify', 'validate-job'))
+    parser.add_argument('action', choices=('refresh', 'verify', 'validate-job', 'latest'))
     parser.add_argument('--config', type=Path)
     args = parser.parse_args()
     if args.action == 'refresh':
         refresh()
+    elif args.action == 'latest':
+        if args.config is None:
+            parser.error('--config is required')
+        print(latest_checkpoint(json.loads(args.config.read_text())['run_dir']))
     else:
         verify()
         if args.action == 'validate-job':

@@ -50,6 +50,10 @@ args=(--config "$CONFIG" --execute)
 if [[ "$MODE" = pilot ]]; then
     args+=(--stop-after-steps "$PILOT_STEPS")
 fi
+if [[ "${RESUME:-}" = latest ]]; then
+    RESUME="$(python "$BUNDLE/bundle.py" latest --config "$CONFIG")"
+    printf 'RESUME=latest -> %s\n' "$RESUME"
+fi
 if [[ -n "${RESUME:-}" ]]; then
     [[ "$RESUME" = /* ]] || { printf '%s\n' 'RESUME must be an absolute trusted checkpoint path' >&2; exit 2; }
     args+=(--resume "$RESUME")

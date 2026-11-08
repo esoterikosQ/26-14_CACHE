@@ -82,6 +82,22 @@ class BundleContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.check()
 
+    def test_latest_checkpoint_needs_sidecar_and_idle_run(self):
+        from bundle import latest_checkpoint
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            with self.assertRaisesRegex(ValueError, 'No completed'):
+                latest_checkpoint(run)
+            for step in (50, 2000, 4000):
+                (run / f'step-{step:08d}.pt').write_text('x')
+                (run / f'step-{step:08d}.sha256').write_text('x')
+            (run / 'step-00006000.pt').write_text('partial: sidecar not written yet')
+            (run / 'final-00009000.pt').write_text('not a rolling checkpoint')
+            self.assertEqual(latest_checkpoint(run), run / 'step-00004000.pt')
+            (run / '.active').write_text('')
+            with self.assertRaisesRegex(ValueError, 'active'):
+                latest_checkpoint(run)
+
     def test_snapshot_hash_and_allowlist(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
