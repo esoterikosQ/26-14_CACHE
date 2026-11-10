@@ -6,7 +6,7 @@
   "files": {
     "blt_hf/__init__.py": "4981c134e251b71df4d0b14388007d103ca98567a13ea544e54bf532797424a8",
     "blt_hf/entropy_data.py": "d04365bc4bcc440816bb2eb1919395ab48ea181e052bb6fcfef857dda7bf4d38",
-    "blt_hf/entropy_train.py": "be20f9dd18fb6e5bba564db4c22c8c7b874431ec797c47731f626b1c32af2f94",
+    "blt_hf/entropy_train.py": "dc3fb5d9137a1f2c4f7524f20d33dd197b4a3b6144ac74abe0bd9bdb611eb4a7",
     "blt_hf/entropy_corpus.py": "b101a696c84b01570da1c61cf5bd340c840162a28de9154e616ef9e1d5c2aa13",
     "blt_hf/entropy_fineweb.py": "2001d15104f8e08846514f1a0b5b4b5a79e5ec2c20ba9c9028c3f884c379b8a3",
     "blt_hf/entropy_combine.py": "a74cf983ac3b5a744317d027f0f5a073ff05c899b6a69f814dfc18c5f152d66f",
@@ -21,7 +21,7 @@
     "blt_hf/patched/__init__.py": "ca61cf5b07d487894b00924fe9c7c669a57d5ed59bb7af76603e27cd6a949af6",
     "blt_hf/patched/modeling_blt.py": "61719aa2f0050ad4eb48eee9fbc941bd0de6f7110ccd528359cf096848302746",
     "blt_hf_checks/check_env.py": "16da3e0acfa254902bdf3df14cad0435dac4534a5260fd98e013ee41d4acd635",
-    "tests/test_hf_entropy.py": "637bdd3ebb0171e6f5bbe07537f51e5063f7c21520b9cb6e46f3ad38b1481036",
+    "tests/test_hf_entropy.py": "24c818c92d74d662c623f6da2d1ec9167e70dd5a31ca7d63cf0bedb05f924c2f",
     "tests/test_hf_entropy_combine.py": "c8928d19c787de56274097a80aab5cf93b6934bd71e55dcfe23b483f15625ede",
     "tests/test_hf_training.py": "b831cc6d2dab79358e8cf9e89d2725e81267406170c1dc0e6b4fe86db2f6e950",
     "plan/korean_entropy_preparation.json": "da2a30c1f3a59186018a492694f068467db558755ddee2169c47838f8dcd0b1d",

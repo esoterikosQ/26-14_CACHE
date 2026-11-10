@@ -47,6 +47,10 @@ if [[ "$MODE" = preflight ]]; then
 fi
 python -c 'import json,sys; report=json.load(open(sys.argv[1])); assert report["training_ready"], report["blockers"]' "$REPORT_DIR/preflight.json"
 args=(--config "$CONFIG" --execute)
+# The site job wrapper does not forward --signal=B:USR1 to python, so stop on the job end time itself.
+END_TIME="$(scontrol show job "$SLURM_JOB_ID" -o | grep -o 'EndTime=[^ ]*' | cut -d= -f2)"
+args+=(--deadline-unix "$(( $(date -d "$END_TIME" +%s) - 600 ))")
+printf 'Job end %s; save-and-stop deadline 10 minutes earlier\n' "$END_TIME"
 if [[ "$MODE" = pilot ]]; then
     args+=(--stop-after-steps "$PILOT_STEPS")
 fi

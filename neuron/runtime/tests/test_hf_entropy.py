@@ -62,6 +62,10 @@ class EntropyDataContracts(unittest.TestCase):
         finally:
             stop.restore()
         self.assertEqual(previous, {number: signal.getsignal(number) for number in previous})
+        import time
+        self.assertFalse(StopRequest(time.time() + 60).requested)
+        late = StopRequest(time.time() - 1)
+        self.assertEqual((late.requested, late.signaled), (True, False))
 
     def test_bytes_are_preserved_and_shifted_once(self):
         text = '한글 e\u0301\n'
@@ -180,6 +184,16 @@ class EntropyDataContracts(unittest.TestCase):
                 self.assertEqual(preflight(config)['blockers'], ['max_steps must exceed warmup_steps + min_decay_steps'])
                 config.update(max_steps=20000, sequence_length=512, attention_backend='flash')
                 self.assertEqual(len(preflight(config)['blockers']), 3)
+                config.update(sequence_length=8192, attention_backend='flex_attention')
+                checkpoint = Path(directory) / 'final.pt'
+                checkpoint.write_text('x')
+                checkpoint.with_suffix('.sha256').write_text('a' * 64 + '\n')
+                config['init_from'] = {'checkpoint': str(checkpoint), 'sha256': 'a' * 64}
+                self.assertIs(preflight(config)['training_ready'], True)
+                config['init_from']['sha256'] = 'b' * 64
+                self.assertEqual(preflight(config)['blockers'], ['init_from sha256 differs from the checkpoint sidecar'])
+                config['init_from'] = {'checkpoint': 'relative.pt', 'sha256': 'a' * 64}
+                self.assertEqual(len(preflight(config)['blockers']), 1)
 
     def test_preflight_stays_blocked_without_data_and_budgets(self):
         from blt_hf.entropy_train import preflight
@@ -705,6 +719,21 @@ class EntropyOptimizerContracts(unittest.TestCase):
                 handle.write(b'corruption')
             with self.assertRaisesRegex(ValueError, 'file hash mismatch'):
                 restore_state(path, restored, restored_names, restored_master, restored_optimizer, 'synthetic')
+            from blt_hf.entropy_train import initialize_from
+            source = Path(directory) / 'final.pt'
+            save_state(source, names, master, optimizer, progress, 'other-run')
+            digest = file_sha256(source)
+            fresh = TinyPatcher().to(torch.bfloat16).train()
+            fresh_names, fresh_master, fresh_optimizer = setup(fresh)
+            self.assertEqual(initialize_from(source, digest, fresh, fresh_names, fresh_master, fresh_optimizer)['stream'],
+                             progress['stream'])
+            for value, weight, parameter in zip(fresh_master, master, fresh.parameters()):
+                self.assertTrue(torch.equal(value, weight))
+                self.assertTrue(torch.equal(parameter, weight.to(torch.bfloat16)))
+            self.assertEqual(float(fresh_optimizer.state_dict()['state'][0]['step']),
+                             float(optimizer.state_dict()['state'][0]['step']))
+            with self.assertRaisesRegex(ValueError, 'init_from checkpoint hash'):
+                initialize_from(source, '0' * 64, fresh, fresh_names, fresh_master, fresh_optimizer)
             results = []
             for micro_batch in (1, len(tokens)):
                 torch.manual_seed(11)

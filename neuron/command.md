@@ -521,7 +521,7 @@ sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r98
 외부 checkpoint는 torch pickle 위험 때문에 사용하지 않는다. `.active`가 남으면 실행 중
 프로세스가 없는지 먼저 확인하고 별도 복구 판단을 한다. 자동 삭제는 하지 않는다.
 
-### 24시간 작업 미리 걸기
+### 다음 작업 미리 걸기
 
 `RESUME=latest`는 config의 `run_dir`에서 `.sha256`까지 기록된 가장 최근 `step-*.pt`를 고른다.
 `.active`가 남아 있거나 완성된 checkpoint가 없으면 그 job은 시작 직후 실패한다.
@@ -530,14 +530,11 @@ sbatch --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=/scratch/r98
 
 ```bash
 CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_entropy/configs/ko-entropy-h200-20261107-01.json
-JOB=$(sbatch --parsable --time=24:00:00 --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=$CONFIG,MODE=train,RESUME=latest neuron/train_entropy.sh)
-echo $JOB
-for i in 2 3 4 5 6; do
-    JOB=$(sbatch --parsable --dependency=afterany:$JOB --time=24:00:00 --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=$CONFIG,MODE=train,RESUME=latest neuron/train_entropy.sh)
-    echo $JOB
-done
+sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,BUNDLE=/scratch/r984a02/blt-cache/neuron,CONFIG=$CONFIG,MODE=train,RESUME=latest neuron/train_entropy.sh
 squeue -u r984a02
 ```
+
+대기 사유가 `(Dependency)`로 보여야 이전 job 뒤에 실행된다.
 
 ## 10. 상태 확인과 저장 후 중단
 

@@ -27,12 +27,19 @@ POSITIVE_INTEGERS = ('sequence_length', 'micro_batch', 'accumulation', 'save_eve
 
 
 class StopRequest:
-    def __init__(self):
-        self.requested = False
+    """SIGTERM/SIGUSR1 or a wall-clock deadline (job end minus a margin) asks for save-and-stop."""
+
+    def __init__(self, deadline=None):
+        self.signaled = False
+        self.deadline = deadline
         self.previous = {}
 
+    @property
+    def requested(self):
+        return self.signaled or (self.deadline is not None and time.time() >= self.deadline)
+
     def request(self, number, frame):
-        self.requested = True
+        self.signaled = True
 
     def install(self):
         for number in (signal.SIGTERM, signal.SIGUSR1):
@@ -276,6 +283,23 @@ def restore_state(path, model, names, master, optimizer, signature):
     return state['progress']
 
 
+def initialize_from(path, expected_sha256, model, names, master, optimizer):
+    """Weights, AdamW state and data position of another run's checkpoint; schedule and RNG start fresh."""
+    import torch
+    path = Path(path)
+    if file_sha256(path) != expected_sha256 or path.with_suffix('.sha256').read_text().strip() != expected_sha256:
+        raise ValueError('init_from checkpoint hash mismatch')
+    state = torch.load(path, map_location='cpu', weights_only=False)
+    if list(state['master']) != list(names):
+        raise ValueError('init_from parameter names differ')
+    with torch.no_grad():
+        for weight, parameter, name in zip(master, model.parameters(), names):
+            weight.copy_(state['master'][name])
+            parameter.copy_(weight)
+    optimizer.load_state_dict(state['optimizer'])
+    return state['progress']
+
+
 def save_rolling(root, names, master, optimizer, progress, signature, keep):
     path = root / f"step-{progress['step']:08d}.pt"
     if not path.exists():
@@ -331,6 +355,13 @@ def preflight(config):
         blockers.append('nonnegative finite weight_decay required')
     if not blockers and config['max_steps'] <= config['warmup_steps'] + config['min_decay_steps']:
         blockers.append('max_steps must exceed warmup_steps + min_decay_steps')
+    source = config.get('init_from')
+    if source is not None:
+        if (not isinstance(source, dict) or set(source) != {'checkpoint', 'sha256'} or
+                not Path(source['checkpoint']).is_absolute() or not Path(source['checkpoint']).is_file()):
+            blockers.append('init_from needs an existing absolute checkpoint and its sha256')
+        elif Path(source['checkpoint']).with_suffix('.sha256').read_text().strip() != source['sha256']:
+            blockers.append('init_from sha256 differs from the checkpoint sidecar')
     return {'training_ready': not blockers, 'blockers': blockers, 'dataset': summary}
 
 
@@ -342,7 +373,7 @@ def check_storage(root, config, reserve=0):
         raise ValueError('Run artifact budget would be exceeded')
 
 
-def run(config, resume=None, stop_after_steps=None):
+def run(config, resume=None, stop_after_steps=None, deadline=None):
     import torch
     check = preflight(config)
     if not check['training_ready']:
@@ -393,6 +424,11 @@ def run(config, resume=None, stop_after_steps=None):
     if resume:
         progress = restore_state(resume, model, names, master, optimizer, signature)
     else:
+        if config.get('init_from'):
+            prior = initialize_from(config['init_from']['checkpoint'], config['init_from']['sha256'],
+                                    model, names, master, optimizer)
+            progress.update(stream=prior['stream'], init_from={
+                **config['init_from'], 'step': prior['step'], 'exposed_bytes': prior['exposed_bytes']})
         root.mkdir()
         (root / 'contract.json').write_text(json.dumps(identity, indent=2) + '\n')
         (root / 'trainable.json').write_text(json.dumps(
@@ -403,7 +439,7 @@ def run(config, resume=None, stop_after_steps=None):
     lock = root / '.active'
     with lock.open('x'):
         pass
-    stop = StopRequest()
+    stop = StopRequest(deadline)
     batches = None
     validation_path = check['dataset']['validation']['path']
 
@@ -414,6 +450,13 @@ def run(config, resume=None, stop_after_steps=None):
         temporary.write_text(json.dumps(report, indent=2) + '\n')
         temporary.replace(root / name)
         print(json.dumps({'event': name, **report}), flush=True)
+
+    def save_predecay():
+        # Kept outside the rolling set so a longer stable phase can later branch from here.
+        path = root / f"predecay-{progress['step']:08d}.pt"
+        if not path.exists():
+            check_storage(root, config, checkpoint_reserve)
+            save_state(path, names, master, optimizer, dict(progress), signature)
 
     try:
         stop.install()
@@ -427,7 +470,7 @@ def run(config, resume=None, stop_after_steps=None):
             if decay is not None and step >= decay['start'] + decay['length']:
                 status = 'finished'
             elif stop.requested:
-                status = 'signal'
+                status = 'signal' if stop.signaled else 'deadline'
             elif progress['elapsed_seconds'] >= config['max_seconds']:
                 status = 'max_seconds'
             elif stop_after_steps is not None and invocation_steps >= stop_after_steps:
@@ -437,17 +480,19 @@ def run(config, resume=None, stop_after_steps=None):
                 try:
                     report = evaluate(model, validation_path, config, context, 'cuda', config['eval_documents'], stop)
                 except InterruptedError:
-                    status = 'signal'
+                    status = 'signal' if stop.signaled else 'deadline'
                     continue
                 report['seconds'] = time.monotonic() - begun
                 progress['evaluations'].append([step, report['byte_bpb']])
                 progress['last_eval_step'] = step
                 if decay is None and step >= config['warmup_steps'] and plateaued(progress['evaluations'], config):
                     progress['decay'] = {'start': step, 'length': decay_length(step, config), 'reason': 'plateau'}
+                    save_predecay()
                 record(f'validation-{step:08d}.json', {**report, 'decay': progress['decay']})
             elif (decay is None and step >= config['warmup_steps'] and
                   step + decay_length(step, config) >= config['max_steps']):
                 progress['decay'] = {'start': step, 'length': config['max_steps'] - step, 'reason': 'max_steps'}
+                save_predecay()
             else:
                 waited = time.monotonic()
                 tokens, keep, state = batches.get()
@@ -506,9 +551,9 @@ def run(config, resume=None, stop_after_steps=None):
                 report['seconds'] = time.monotonic() - begun
                 record(f"pilot-validation-{progress['step']:08d}.json", report)
             except InterruptedError:
-                status = 'signal'
+                status = 'signal' if stop.signaled else 'deadline'
         print(json.dumps({'status': status, 'checkpoint': str(checkpoint), 'step': progress['step']}), flush=True)
-        return 75 if status == 'signal' else 0
+        return 75 if status in ('signal', 'deadline') else 0
     finally:
         if batches is not None:
             batches.close()
@@ -522,12 +567,13 @@ def main():
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--resume', help='Trusted local checkpoint only; torch pickle loading required')
     parser.add_argument('--stop-after-steps', type=int)
+    parser.add_argument('--deadline-unix', type=float, help='Save and stop at this wall-clock time (job end minus margin)')
     parser.add_argument('--check-model', action='store_true', help='CPU-only strict model load, no optimizer')
     parser.add_argument('--report', help='Fresh preflight report JSON; refuses to overwrite')
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())
     if args.execute:
-        return run(config, args.resume, args.stop_after_steps)
+        return run(config, args.resume, args.stop_after_steps, args.deadline_unix)
     else:
         report = preflight(config)
         if args.check_model:
