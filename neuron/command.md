@@ -671,3 +671,51 @@ sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,CONF
 ```
 
 종료 20분 전에 저장하고 exit 75로 끝난다(Slurm에는 FAILED). 로그 전달은 11절과 같다.
+
+### 13-3. 패처 비교 학습(A 공개@4.5 대 C run1@4.5)
+
+12절 결과에 따라 같은 평균 패치 길이 4.5바이트에서 두 패처로 BODY_FULL을 각각 약 1GB 학습해 비교한다.
+threshold는 12절 보정값(공개 1.8671875, run1 1.140625)이다. 두 설정은 패처만 다르고 데이터 순서·스케줄이 같다.
+스케줄: warmup 0~200, 고정 lr 200~500, 500~1000 선형 decay(1e-4 → 1e-5), 1000 step(약 1GB)에서 끝나고
+validation 앞 20000문서로 최종 BPB를 잰다. run 하나가 checkpoint를 최대 약 220GB 쓴다(두 run 합계 약 440GB).
+
+설정 두 개를 한 번에 만든다.
+
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
+template = json.loads(Path('neuron/body.template.json').read_text())
+contract = json.loads(Path('outputs/korean_entropy/ko-entropy-h200-20261110-01/contract.json').read_text())
+run1 = Path('outputs/korean_entropy/ko-entropy-h200-20261107-01/final-00137500.pt').resolve()
+arms = {'ko-body-cmp-public45-20261115-01': {'checkpoint': None, 'sha256': None, 'threshold': 1.8671875},
+        'ko-body-cmp-run1-45-20261115-01': {'checkpoint': str(run1), 'threshold': 1.140625,
+                                            'sha256': run1.with_suffix('.sha256').read_text().strip()}}
+Path('artifacts/korean_body/configs').mkdir(parents=True, exist_ok=True)
+for run_id, patcher in arms.items():
+    config = dict(template, training_authorized=True, dataset_manifest=contract['config']['dataset_manifest'],
+                  run_dir=str(Path('outputs/korean_body', run_id).resolve()), patcher=patcher,
+                  max_steps=1000, max_train_bytes=2000000000, max_seconds=172800,
+                  max_run_bytes=250000000000, max_gpu_memory_bytes=135000000000)
+    with Path(f'artifacts/korean_body/configs/{run_id}.json').open('x') as handle:
+        json.dump(config, handle, indent=2)
+        handle.write('\n')
+    print(run_id, patcher['threshold'])
+PY
+```
+
+먼저 각각 20 step 파일럿으로 메모리·속도를 확인한다(H200 job 2개).
+
+```bash
+A=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp-public45-20261115-01.json
+C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp-run1-45-20261115-01.json
+sbatch --time=02:00:00 --export=ALL,CONFIG=$A,MODE=pilot,PILOT_STEPS=20 neuron/train_body.sh
+sbatch --time=02:00:00 --export=ALL,CONFIG=$C,MODE=pilot,PILOT_STEPS=20 neuron/train_body.sh
+```
+
+로그 확인 뒤 이어서 학습한다.
+
+```bash
+sbatch --time=24:00:00 --export=ALL,CONFIG=$A,MODE=train,RESUME=latest neuron/train_body.sh
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
+```
