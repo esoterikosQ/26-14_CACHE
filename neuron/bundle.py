@@ -15,11 +15,13 @@ FILES = (
     'blt_hf/__init__.py', 'blt_hf/entropy_data.py', 'blt_hf/entropy_train.py',
     'blt_hf/entropy_corpus.py', 'blt_hf/entropy_fineweb.py',
     'blt_hf/entropy_combine.py', 'blt_hf/entropy_combine_diagnose.py', 'blt_hf/native/combine.cpp',
+    'blt_hf/patcher_compare.py',
     'blt_hf/training.py', 'blt_hf/model.py', 'blt_hf/manifest.py',
     'blt_hf/data_adapter.py', 'blt_hf/attention.py', 'blt_hf/patching.py',
     'blt_hf/patched/__init__.py', 'blt_hf/patched/modeling_blt.py',
     'blt_hf_checks/check_env.py',
     'tests/test_hf_entropy.py', 'tests/test_hf_entropy_combine.py', 'tests/test_hf_training.py',
+    'tests/test_hf_patcher_compare.py',
     'plan/korean_entropy_preparation.json',
     'plan/nikl_sources.json',
 )

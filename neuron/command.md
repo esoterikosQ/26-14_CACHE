@@ -2,7 +2,7 @@
 
 모든 명령은 **사용자가 Neuron에서 직접 실행**한다. 셸은 bash 기준이다.
 phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
-현재 제공하는 실행기는 T12 한국어 entropy 교사용이며 본체 ENCODER/GLOBAL/BODY_FULL 학습용이 아니다.
+현재 제공하는 실행기는 T12 한국어 entropy 교사용이며 본체 ENCODER/HASH/BODY_FULL 학습용이 아니다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
 NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전체 train 확보/통합은 아래6-4절을 따른다.
 통합 자료 검토, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
@@ -586,5 +586,27 @@ find runtimelog -maxdepth 2 -type f -print
 ```
 
 받은 결과의 디렉터리명/commit을 알려주면 해당 로그를 기준으로 분석한다.
-한국어 본체5개 arm/교사 threshold 보정/최종 품질 비교/독립 평가 명령은 아직 구현되지 않았다.
-이 명령표를 그 단계들의 실행 승인이나 완료 증거로 사용하지 않는다.
+본체 ENCODER/HASH/BODY_FULL 학습 명령은 아직 구현되지 않았다.
+
+## 12. 패처 비교(BLT 기준·threshold 보정·PATCHER)
+
+공개 본체를 고정하고 패처(공개, run1 final, run2 final)와 threshold만 바꿔 한국어 본체 BPB를 잰다.
+한 job이 세 단계를 모두 한다. 영어 평가는 하지 않는다.
+
+1. threshold 보정: 두 run이 읽지 않은 train 뒷부분에서 무작위 문서 약 20MB를 뽑아, 패처마다
+   평균 패치 길이 4 / 4.5 / 6 / 8 bytes가 되는 threshold를 찾는다.
+2. BLT 기준: 공개 패처 + 공개 threshold(설정값 1.3354).
+3. PATCHER: 3개 패처 × 4개 길이. validation 앞 5000문서(패처 학습 때 쓴 검증 표본)로 평가한다.
+
+입력 경로(manifest·공개 모델)는 두 run의 `contract.json`에서 읽고 해시를 검사한다.
+H200 1GPU, 예상 3~4시간(최대 12시간 할당). 코드 갱신(2절) 뒤 `blt-cache`에서 제출한다.
+`RUN_ID`는 매번 새 이름을 쓴다.
+
+```bash
+sbatch --export=ALL,RUN_ID=ko-patcher-compare-20261114-01 neuron/compare_patchers.sh
+```
+
+로그는 `runtimelog/patcher-compare-<JOB_ID>.out`/`.err`에 바로 기록된다. 100문서마다 진행 BPB,
+끝에 요약 JSON(threshold, 설정별 BPB·패치 통계, 비교 구간, 경계 일치도)이 찍힌다.
+문서별 상세는 `outputs/korean_patcher_compare/<RUN_ID>/report.json`에 남으며 Git에 올리지 않는다.
+끝나면 11절처럼 `runtimelog`만 push한다.
