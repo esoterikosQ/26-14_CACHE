@@ -704,18 +704,21 @@ for run_id, patcher in arms.items():
 PY
 ```
 
-먼저 각각 20 step 파일럿으로 메모리·속도를 확인한다(H200 job 2개).
+두 run을 H200 job 2개로 동시에 제출한다. 파일럿 단계는 따로 두지 않는다.
+각 job은 시작할 때 preflight와 step 0 검증을 하므로, 설정·메모리 문제가 있으면 처음에 멈춘다.
 
 ```bash
 A=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp-public45-20261115-01.json
 C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp-run1-45-20261115-01.json
-sbatch --time=02:00:00 --export=ALL,CONFIG=$A,MODE=pilot,PILOT_STEPS=20 neuron/train_body.sh
-sbatch --time=02:00:00 --export=ALL,CONFIG=$C,MODE=pilot,PILOT_STEPS=20 neuron/train_body.sh
+sbatch --time=24:00:00 --export=ALL,CONFIG=$A,MODE=train neuron/train_body.sh
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train neuron/train_body.sh
 ```
 
-로그 확인 뒤 이어서 학습한다.
+24시간 안에 1000 step을 못 마치면 마감 전에 저장하고 끝난다(exit 75). 그때는 끝난 job 대신 같은 설정으로 이어 제출한다.
 
 ```bash
 sbatch --time=24:00:00 --export=ALL,CONFIG=$A,MODE=train,RESUME=latest neuron/train_body.sh
 sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
 ```
+
+끝나면 각 run의 `validation-final.json` BPB를 비교한다. 로그는 `runtimelog/body-<JOB_ID>.out`이며 11절처럼 push한다.
