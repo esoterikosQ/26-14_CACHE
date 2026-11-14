@@ -15,13 +15,13 @@ FILES = (
     'blt_hf/__init__.py', 'blt_hf/entropy_data.py', 'blt_hf/entropy_train.py',
     'blt_hf/entropy_corpus.py', 'blt_hf/entropy_fineweb.py',
     'blt_hf/entropy_combine.py', 'blt_hf/entropy_combine_diagnose.py', 'blt_hf/native/combine.cpp',
-    'blt_hf/patcher_compare.py',
+    'blt_hf/patcher_compare.py', 'blt_hf/body_train.py', 'blt_hf/fast_body.py',
     'blt_hf/training.py', 'blt_hf/model.py', 'blt_hf/manifest.py',
     'blt_hf/data_adapter.py', 'blt_hf/attention.py', 'blt_hf/patching.py',
     'blt_hf/patched/__init__.py', 'blt_hf/patched/modeling_blt.py',
     'blt_hf_checks/check_env.py',
     'tests/test_hf_entropy.py', 'tests/test_hf_entropy_combine.py', 'tests/test_hf_training.py',
-    'tests/test_hf_patcher_compare.py',
+    'tests/test_hf_patcher_compare.py', 'tests/test_hf_body_train.py',
     'plan/korean_entropy_preparation.json',
     'plan/nikl_sources.json',
 )
@@ -58,7 +58,12 @@ def verify(directory=HERE):
     print(f'Runtime verified: {len(FILES)} files')
 
 
-def validate_job(config, environment, job_details, root=ROOT, now=None):
+RUN_BASES = ('outputs/korean_entropy', 'outputs/korean_body')
+
+
+def validate_job(config, environment, job_details, root=ROOT, now=None, run_base=RUN_BASES[0]):
+    if run_base not in RUN_BASES:
+        raise ValueError('Unreviewed run base')
     if environment.get('SLURM_SUBMIT_DIR') != str(SUBMIT_ROOT) or not environment.get('SLURM_JOB_ID'):
         raise ValueError(f'Submit directory must be {SUBMIT_ROOT} inside a SLURM job')
     if environment.get('SLURM_JOB_NUM_NODES') != '1' or environment.get('SLURM_NTASKS', '1') != '1':
@@ -73,7 +78,7 @@ def validate_job(config, environment, job_details, root=ROOT, now=None):
     fields = dict(field.split('=', 1) for field in job_details.split() if '=' in field)
     if fields.get('JobId') != environment['SLURM_JOB_ID'] or fields.get('Comment') != 'field=nlp;appl=pytorch':
         raise ValueError('SLURM job identity/comment mismatch')
-    for key, base in [('model_path', root / 'artifacts'), ('run_dir', root / 'outputs/korean_entropy')]:
+    for key, base in [('model_path', root / 'artifacts'), ('run_dir', root / run_base)]:
         path = Path(config[key])
         if not path.is_absolute() or not path.resolve().is_relative_to(base.resolve()) or path.resolve() == base.resolve():
             raise ValueError(f'{key} must stay under {base}')
@@ -115,6 +120,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('refresh', 'verify', 'validate-job', 'latest'))
     parser.add_argument('--config', type=Path)
+    parser.add_argument('--run-base', choices=RUN_BASES, default=RUN_BASES[0])
     args = parser.parse_args()
     if args.action == 'refresh':
         refresh()
@@ -128,7 +134,7 @@ def main():
             if args.config is None:
                 parser.error('--config is required')
             details = subprocess.check_output(['scontrol', 'show', 'job', '-o', os.environ['SLURM_JOB_ID']], text=True)
-            mode = validate_job(json.loads(args.config.read_text()), os.environ, details)
+            mode = validate_job(json.loads(args.config.read_text()), os.environ, details, run_base=args.run_base)
             print(f'SLURM contract verified: {mode}')
 
 
