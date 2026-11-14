@@ -2,7 +2,8 @@
 
 모든 명령은 **사용자가 Neuron에서 직접 실행**한다. 셸은 bash 기준이다.
 phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
-현재 제공하는 실행기는 T12 한국어 entropy 교사용이며 본체 ENCODER/HASH/BODY_FULL 학습용이 아니다.
+현재 실행기는 한국어 entropy 패처 학습(`train_entropy.sh`), 패처 비교(`compare_patchers.sh`, 12절),
+본체 전체 추가 학습(`train_body.sh`, 13절)이다. ENCODER/HASH 부분 학습은 아직 없다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
 NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전체 train 확보/통합은 아래6-4절을 따른다.
 통합 자료 검토, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
@@ -610,3 +611,63 @@ sbatch --export=ALL,RUN_ID=ko-patcher-compare-20261114-01 neuron/compare_patcher
 끝에 요약 JSON(threshold, 설정별 BPB·패치 통계, 비교 구간, 경계 일치도)이 찍힌다.
 문서별 상세는 `outputs/korean_patcher_compare/<RUN_ID>/report.json`에 남으며 Git에 올리지 않는다.
 끝나면 11절처럼 `runtimelog`만 push한다.
+
+
+
+## 13. 본체 전체 추가 학습(BODY_FULL)
+
+12절 결과로 패처와 threshold를 하나 고른 뒤 실행한다. 공개 본체의 패처 밖 모든 파라미터
+(로컬 인코더/디코더, 해시 n-gram 임베딩, 글로벌 트랜스포머, lm_head)를 학습하고 패처는 고정한다.
+H200 1GPU, FP32 원본 가중치+AdamW(약 91GB)와 BF16 연산, 해시 임베딩은 weight decay 제외.
+문서를 이어 붙이지 않고 8192바이트 청크 하나씩 처리하며 step당 약 1MB다.
+어텐션 마스크 계산은 블록 희소(flex)·compile 고속 경로를 쓴다(결과는 기존 경로와 동일, FP32 검증).
+checkpoint 하나가 약 55GB이므로 디스크 여유를 확인한다.
+
+### 13-1. 설정 만들기
+
+`PATCHER`와 `THRESHOLD`만 12절 결과에 맞게 바꾼다. 공개 패처면 `PATCHER=public`.
+manifest 경로는 run2의 계약에서 그대로 가져온다. 예산 5개는 null로 생성되므로 승인 후 채운다.
+
+```bash
+RUN_ID=ko-body-full-h200-20261115-01
+PATCHER=/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-20261110-01/final-00126500.pt
+THRESHOLD=0.0
+python - "$RUN_ID" "$PATCHER" "$THRESHOLD" <<'PY'
+import json, sys
+from pathlib import Path
+run_id, patcher, threshold = sys.argv[1], sys.argv[2], float(sys.argv[3])
+config = json.loads(Path('neuron/body.template.json').read_text())
+contract = json.loads(Path('outputs/korean_entropy/ko-entropy-h200-20261110-01/contract.json').read_text())
+config['dataset_manifest'] = contract['config']['dataset_manifest']
+config['run_dir'] = str(Path('outputs/korean_body', run_id).resolve())
+config['patcher'] = {'checkpoint': None, 'sha256': None, 'threshold': threshold} if patcher == 'public' else {
+    'checkpoint': patcher, 'sha256': Path(patcher).with_suffix('.sha256').read_text().strip(), 'threshold': threshold}
+Path('artifacts/korean_body/configs').mkdir(parents=True, exist_ok=True)
+with Path(f'artifacts/korean_body/configs/{run_id}.json').open('x') as handle:
+    json.dump(config, handle, indent=2)
+    handle.write('\n')
+PY
+vi artifacts/korean_body/configs/$RUN_ID.json
+```
+
+`vi`에서 `max_steps`, `max_train_bytes`, `max_seconds`, `max_run_bytes`, `max_gpu_memory_bytes`를 정수로 채우고
+`training_authorized`를 `true`로 바꾼다. 예: GPU 135000000000, run 디스크 300000000000.
+
+### 13-2. 2step 파일럿 → 본 학습
+
+파일럿 job이 preflight도 함께 한다(통과하지 못하면 학습 전에 멈춘다).
+
+```bash
+CONFIG=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-h200-20261115-01.json
+sbatch --export=ALL,CONFIG=$CONFIG,MODE=pilot,PILOT_STEPS=2 neuron/train_body.sh
+```
+
+파일럿 로그(`runtimelog/body-<JOB_ID>.out`)의 step 시간, bytes/s, `peak_allocated_bytes`,
+step 0 validation을 확인한 뒤 같은 run을 이어 학습한다. 다음 job은 앞 job 번호로 연결한다.
+
+```bash
+sbatch --time=24:00:00 --export=ALL,CONFIG=$CONFIG,MODE=train,RESUME=latest neuron/train_body.sh
+sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,CONFIG=$CONFIG,MODE=train,RESUME=latest neuron/train_body.sh
+```
+
+종료 20분 전에 저장하고 exit 75로 끝난다(Slurm에는 FAILED). 로그 전달은 11절과 같다.
