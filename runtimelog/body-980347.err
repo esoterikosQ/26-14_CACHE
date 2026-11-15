@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/scratch/r984a02/blt-cache/neuron/bundle.py", line 142, in <module>
+    main()
+  File "/scratch/r984a02/blt-cache/neuron/bundle.py", line 137, in main
+    mode = validate_job(json.loads(args.config.read_text()), os.environ, details, run_base=args.run_base)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home01/r984a02/.conda/envs/phdq_blt_hf/lib/python3.11/pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home01/r984a02/.conda/envs/phdq_blt_hf/lib/python3.11/pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp-public45-20261115-01.json'
