@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/scratch/r984a02/blt-cache/neuron/bundle.py", line 142, in <module>
+    main()
+  File "/scratch/r984a02/blt-cache/neuron/bundle.py", line 130, in main
+    print(latest_checkpoint(json.loads(args.config.read_text())['run_dir']))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/r984a02/blt-cache/neuron/bundle.py", line 112, in latest_checkpoint
+    raise ValueError(f'Run is active or was killed without cleanup: {run_dir}/.active')
+ValueError: Run is active or was killed without cleanup: /scratch/r984a02/blt-cache/outputs/korean_body/ko-body-cmp5g-public45-20261116-01/.active
