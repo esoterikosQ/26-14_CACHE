@@ -3,7 +3,7 @@
 모든 명령은 **사용자가 Neuron에서 직접 실행**한다. 셸은 bash 기준이다.
 phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
 현재 실행기는 한국어 entropy 패처 학습(`train_entropy.sh`), 패처 비교(`compare_patchers.sh`, 12절),
-본체 전체 추가 학습(`train_body.sh`, 13절)이다. ENCODER/HASH 부분 학습은 아직 없다.
+본체 전체 추가 학습(`train_body.sh`, 13절), 한국어 count 패처 자료 추출(`sample_count_data.sh`, 14절)이다. ENCODER/HASH 부분 학습은 아직 없다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
 NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전체 train 확보/통합은 아래6-4절을 따른다.
 통합 자료 검토, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
@@ -722,3 +722,129 @@ sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/tr
 ```
 
 끝나면 각 run의 `validation-final.json` BPB를 비교한다. 로그는 `runtimelog/body-<JOB_ID>.out`이며 11절처럼 push한다.
+
+### 13-4. 패처 비교 연장(A 대 C, 각 약 5GB)
+
+13-3의 1GB 비교에서 C−A 차이가 0.078 → 0.008로 줄어 결론이 나지 않았으므로(2026-11-16 사용자 결정)
+같은 조건으로 각각 5000 step(약 5.2GB)을 공개 본체에서 새로 학습한다. 두 run의 스케줄을 같게 하려고
+정체 판정은 끄고(plateau_patience 1000) 4500 step에서 decay를 시작해 5000 step에서 끝낸다.
+500 step마다 2000문서로 검증하고, 끝나면 20000문서로 최종 BPB를 잰다. job 하나(24시간)에 약 4100 step을
+하므로 각 run은 job 2개가 필요하다. run 하나가 checkpoint를 최대 약 220GB 쓴다.
+
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
+template = json.loads(Path('neuron/body.template.json').read_text())
+contract = json.loads(Path('outputs/korean_entropy/ko-entropy-h200-20261110-01/contract.json').read_text())
+run1 = Path('outputs/korean_entropy/ko-entropy-h200-20261107-01/final-00137500.pt').resolve()
+arms = {'ko-body-cmp5g-public45-20261116-01': {'checkpoint': None, 'sha256': None, 'threshold': 1.8671875},
+        'ko-body-cmp5g-run1-45-20261116-01': {'checkpoint': str(run1), 'threshold': 1.140625,
+                                              'sha256': run1.with_suffix('.sha256').read_text().strip()}}
+for run_id, patcher in arms.items():
+    config = dict(template, training_authorized=True, dataset_manifest=contract['config']['dataset_manifest'],
+                  run_dir=str(Path('outputs/korean_body', run_id).resolve()), patcher=patcher,
+                  max_steps=5000, max_train_bytes=6000000000, max_seconds=259200,
+                  max_run_bytes=250000000000, max_gpu_memory_bytes=135000000000,
+                  eval_every=500, save_every=500, plateau_patience=1000)
+    with Path(f'artifacts/korean_body/configs/{run_id}.json').open('x') as handle:
+        json.dump(config, handle, indent=2)
+        handle.write('\n')
+    print(run_id, patcher['threshold'])
+PY
+A=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp5g-public45-20261116-01.json
+C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-cmp5g-run1-45-20261116-01.json
+sbatch --time=24:00:00 --export=ALL,CONFIG=$A,MODE=train neuron/train_body.sh
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train neuron/train_body.sh
+```
+
+첫 job들이 끝나면(마감 저장, exit 75) 같은 설정으로 이어 제출한다.
+
+```bash
+sbatch --time=24:00:00 --export=ALL,CONFIG=$A,MODE=train,RESUME=latest neuron/train_body.sh
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
+```
+
+### 13-5. 본 학습(C: run1 패처 @4.5)과 A 대조군
+
+2026-11-17 사용자 결정으로 한국어 패처(run1, threshold 1.140625)와 본체를 함께 한국어에 맞춘 C를 본 학습으로 한다.
+13-4의 A-5GB는 패처만 영어인 대조군으로 끝까지 돌린다. 두 run은 4500 step까지 데이터 순서·학습률이 같아
+500 step마다의 검증 BPB(같은 2000문서)를 그대로 비교한다. C는 최대 30000 step(약 31GB, 약 7일)이며
+최근 10회(약 5GB) 최저 BPB 개선이 0.002 미만이면 decay를 시작한다(가장 이르면 5000 step).
+
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
+template = json.loads(Path('neuron/body.template.json').read_text())
+contract = json.loads(Path('outputs/korean_entropy/ko-entropy-h200-20261110-01/contract.json').read_text())
+run1 = Path('outputs/korean_entropy/ko-entropy-h200-20261107-01/final-00137500.pt').resolve()
+run_id = 'ko-body-full-run1-45-20261117-01'
+config = dict(template, training_authorized=True, dataset_manifest=contract['config']['dataset_manifest'],
+              run_dir=str(Path('outputs/korean_body', run_id).resolve()),
+              patcher={'checkpoint': str(run1), 'threshold': 1.140625,
+                       'sha256': run1.with_suffix('.sha256').read_text().strip()},
+              max_steps=30000, max_train_bytes=35000000000, max_seconds=864000,
+              max_run_bytes=300000000000, max_gpu_memory_bytes=135000000000,
+              eval_every=500, save_every=500, plateau_patience=10)
+with Path(f'artifacts/korean_body/configs/{run_id}.json').open('x') as handle:
+    json.dump(config, handle, indent=2)
+    handle.write('\n')
+print(run_id)
+PY
+C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-20261117-01.json
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train neuron/train_body.sh
+```
+
+이후에는 앞 job 번호를 넣어 다음 job을 미리 건다. 새 셸에서는 `C`가 비어 job이 바로 실패하므로 `C=`부터 함께 실행한다.
+
+```bash
+C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-20261117-01.json
+sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
+```
+
+## 14. 한국어 count 패처 자료 추출(T14)
+
+한국어 count 패처의 배경 count 표·교사 라벨·평가에 쓸 문서를 CPT 분할(run1 계약의 manifest)에서 뽑는다.
+적합·LMDB 구축은 itcerdo에서 하므로 여기서는 추출만 한다. cpu 파티션(CPU 4, 16GB, 최대 12시간)을 쓴다.
+원본 train·validation·test 파일은 끝까지 읽어 manifest SHA-256과 대조한다. 문서는 길이 256~65536바이트만 쓴다(영어와 같음).
+
+| 파일 | 내용 |
+| --- | --- |
+| `background.jsonl.gz` | train에서 50GB(배경 count 표용). gzip 후 약 24GB 예상 |
+| `train.jsonl` | train에서 4MB(경계 모수 적합용). 배경과 같은 줄은 쓰지 않는다 |
+| `validation.jsonl` | CPT validation에서 0.5MB(threshold 선택용). CPT 평가에 쓴 앞 20000문서는 제외 |
+| `test.jsonl` | held-out test에서 1.5MB(마지막 BLT 비교용) |
+| `manifest.json` | 각 파일의 문서 수·바이트·SHA-256, 원본 SHA, 추출 규칙 |
+
+코드를 갱신(2절)한 뒤 `blt-cache`에서 제출한다.
+
+```bash
+sbatch --export=ALL,RUN_ID=ko-count-sample-20261127-01 neuron/sample_count_data.sh
+```
+
+끝나면 로그 마지막 줄의 `"status": "prepared"`를 확인한다. 로그는 11절처럼 push한다.
+
+```bash
+tail -n 3 runtimelog/count-sample-JOB_번호.out
+ls -la data/korean_cpt/count_samples/ko-count-sample-20261127-01
+```
+
+자료와 run1 패처 checkpoint는 사용자가 itcerdo의 아래 경로로 옮긴다. 디렉터리는 미리 만들어 두었다.
+itcerdo에 도착한 뒤 압축 해제와 SHA-256 대조는 에이전트가 한다.
+
+| 옮길 것 | itcerdo 경로 |
+| --- | --- |
+| `data/korean_cpt/count_samples/ko-count-sample-20261127-01/`의 파일 5개 | `/home/itcmaster/projects/blt-cache/datasets/ko-count-sample-20261127-01/` |
+| `outputs/korean_entropy/ko-entropy-h200-20261107-01/final-00137500.pt`, `.sha256` | `/home/itcmaster/projects/blt-cache/artifacts/korean_entropy/ko-entropy-h200-20261107-01/` |
+
+Mac을 거쳐 옮기는 예다. **Mac 터미널**에서 실행하며 `NEURON`에는 평소 쓰는 Neuron ssh 이름을 넣는다.
+
+```bash
+NEURON=평소_쓰는_Neuron_접속_이름
+mkdir -p /Volumes/T31/blt-cache/t14/run1
+rsync -rt "$NEURON:/scratch/r984a02/blt-cache/data/korean_cpt/count_samples/ko-count-sample-20261127-01" /Volumes/T31/blt-cache/t14/
+rsync -rt --include 'final-00137500.*' --exclude '*' "$NEURON:/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-20261107-01/" /Volumes/T31/blt-cache/t14/run1/
+rsync -rt /Volumes/T31/blt-cache/t14/ko-count-sample-20261127-01/ itcerdo:/home/itcmaster/projects/blt-cache/datasets/ko-count-sample-20261127-01/
+rsync -rt /Volumes/T31/blt-cache/t14/run1/ itcerdo:/home/itcmaster/projects/blt-cache/artifacts/korean_entropy/ko-entropy-h200-20261107-01/
+```
