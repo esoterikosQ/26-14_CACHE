@@ -1,0 +1,36 @@
+nohup: ignoring input
+{"split": "train", "lines": 1000000, "elapsed_seconds": 54.1, "train": 362309, "background": 1461906103}
+{"split": "train", "lines": 2000000, "elapsed_seconds": 102.6, "train": 783288, "background": 2918553927}
+{"split": "train", "lines": 3000000, "elapsed_seconds": 152.0, "train": 1104141, "background": 4375324451}
+{"split": "train", "lines": 4000000, "elapsed_seconds": 200.7, "train": 1505148, "background": 5831441036}
+{"split": "train", "lines": 5000000, "elapsed_seconds": 250.7, "train": 1952294, "background": 7293103315}
+{"split": "train", "lines": 6000000, "elapsed_seconds": 299.7, "train": 2260573, "background": 8750425851}
+{"split": "train", "lines": 7000000, "elapsed_seconds": 348.0, "train": 2668291, "background": 10205388869}
+{"split": "train", "lines": 8000000, "elapsed_seconds": 396.3, "train": 3119868, "background": 11663278525}
+{"split": "train", "lines": 9000000, "elapsed_seconds": 444.6, "train": 3548826, "background": 13124491720}
+{"split": "train", "lines": 10000000, "elapsed_seconds": 495.7, "train": 3846082, "background": 14575898958}
+{"split": "train", "lines": 11000000, "elapsed_seconds": 544.4, "train": 4000301, "background": 16033426174}
+{"split": "train", "lines": 12000000, "elapsed_seconds": 592.7, "train": 4000301, "background": 17483973144}
+{"split": "train", "lines": 13000000, "elapsed_seconds": 641.1, "train": 4000301, "background": 18938804281}
+{"split": "train", "lines": 14000000, "elapsed_seconds": 692.4, "train": 4000301, "background": 20404150523}
+{"split": "train", "lines": 15000000, "elapsed_seconds": 741.1, "train": 4000301, "background": 21862861676}
+{"split": "train", "lines": 16000000, "elapsed_seconds": 789.5, "train": 4000301, "background": 23318779555}
+{"split": "train", "lines": 17000000, "elapsed_seconds": 837.8, "train": 4000301, "background": 24770200277}
+{"split": "train", "lines": 18000000, "elapsed_seconds": 889.4, "train": 4000301, "background": 26230938079}
+{"split": "train", "lines": 19000000, "elapsed_seconds": 938.1, "train": 4000301, "background": 27689947118}
+{"split": "train", "lines": 20000000, "elapsed_seconds": 986.6, "train": 4000301, "background": 29146145398}
+{"split": "train", "lines": 21000000, "elapsed_seconds": 1035.2, "train": 4000301, "background": 30602113364}
+{"split": "train", "lines": 22000000, "elapsed_seconds": 1088.0, "train": 4000301, "background": 32062859349}
+{"split": "train", "lines": 23000000, "elapsed_seconds": 1136.7, "train": 4000301, "background": 33518615403}
+{"split": "train", "lines": 24000000, "elapsed_seconds": 1185.2, "train": 4000301, "background": 34973033487}
+{"split": "train", "lines": 25000000, "elapsed_seconds": 1233.3, "train": 4000301, "background": 36426796217}
+{"split": "train", "lines": 26000000, "elapsed_seconds": 1285.6, "train": 4000301, "background": 37886105308}
+{"split": "train", "lines": 27000000, "elapsed_seconds": 1334.0, "train": 4000301, "background": 39341247583}
+{"split": "train", "lines": 28000000, "elapsed_seconds": 1385.4, "train": 4000301, "background": 40792328470}
+{"split": "train", "lines": 29000000, "elapsed_seconds": 1434.2, "train": 4000301, "background": 42252287123}
+{"split": "train", "lines": 30000000, "elapsed_seconds": 1482.5, "train": 4000301, "background": 43708679874}
+{"split": "train", "lines": 31000000, "elapsed_seconds": 1530.8, "train": 4000301, "background": 45166949223}
+{"split": "train", "lines": 32000000, "elapsed_seconds": 1582.7, "train": 4000301, "background": 46630837506}
+{"split": "train", "lines": 33000000, "elapsed_seconds": 1631.6, "train": 4000301, "background": 48088792508}
+{"split": "train", "lines": 34000000, "elapsed_seconds": 1679.8, "train": 4000301, "background": 49547302181}
+{"status": "prepared", "splits": {"background": {"documents": 13693137, "utf8_bytes": 50000002259, "file_sha256": "9efee5bad42667b16ef0c0d9872684acde973a2c02202aa550d26c4faa6aa4e0", "sources": {"FineWeb2:kor_Hang": 13667869, "NIKL_DIALOGUE_2020_v1.4": 509, "NIKL_DIALOGUE_2021_v1.1": 908, "NIKL_DIALOGUE_2022_v1.0": 596, "NIKL_DIALOGUE_2023_v1.1": 426, "NIKL_DIALOGUE_2024_v1.0": 720, "NIKL_DIALOGUE_2025_v1.0": 678, "NIKL_OM_2021_v1.1": 16611, "NIKL_SPOKEN_v1.2": 4561, "NIKL_WRITTEN 2025_v1.0": 4, "NIKL_WRITTEN(v1.2)": 255}, "compressed": {"path": "background.jsonl.gz", "sha256": "f2ce5eef8ce4668772108bf5f36b260d8fa9ff56cfcd25c551eb1c13a0b93575", "bytes": 24141846379}}, "train": {"documents": 1074, "utf8_bytes": 4000301, "file_sha256": "b2e258fd4150acc3f00a9c059e339f8eed2bb79ef597b59958301bb0768e9f1a", "sources": {"FineWeb2:kor_Hang": 1074}}, "validation": {"documents": 109, "utf8_bytes": 510257, "file_sha256": "28ca4846ef6eb496580074f11856361a148afff9d0cb63dc04513c60f75eb09c", "sources": {"FineWeb2:kor_Hang": 109}}, "test": {"documents": 394, "utf8_bytes": 1501639, "file_sha256": "21afe34cfe23d24ac978822af9fabff8c532f5c15cb00a357d264bc6485fdeda", "sources": {"FineWeb2:kor_Hang": 394}}}, "error": null, "elapsed_seconds": 1813.1665964126587}
