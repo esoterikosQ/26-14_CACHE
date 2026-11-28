@@ -1,0 +1,20 @@
+{
+  "run_id": "en-patcher-bg10gb-diskcpp-20261024-01",
+  "baseline_config": "experiments/english_patcher_pilot.json",
+  "sources": "evidence/english_dataset_sources_20261019.json",
+  "background_utf8_bytes": 10000000000,
+  "parent_background_run_directory": "runs/en-patcher-bg5gb-20261020-01",
+  "comparison_run_directory": "runs/en-patcher-bg5gb-20261020-01",
+  "background_block_utf8_bytes": 25000000,
+  "compress_background_blocks": true,
+  "verify_projection": true,
+  "preparation_backend": "sqlite_cpp_v1",
+  "sampling_seed": 20261023,
+  "wall_clock_limit": null,
+  "tmux_session": "blt-bg10gb-diskcpp-20261024",
+  "comparison": "Explicit F1 continuation of the failed 10GB run, not F0.5; fixed labels, K=8, W=unlimited, unchanged fitting and paired bootstrap",
+  "sampling": "Same seed, pinned sources, doubled remaining-byte candidate quota, protected parent/splits, LSH/Jaccard and length-stratified random order; only storage and MinHash kernel change",
+  "scratch": "SQLite on disk; 32MiB page-cache target, per-1000-document commits, file-backed temporary storage; delete only new scratch database on successful preparation; preserve on failure",
+  "limits": "Retain baseline 48GiB address-space, minimum 100GiB free disk and maximum 100GiB new artifacts; no wall-clock limit or automatic retry",
+  "heldout": "Raw heldout text only for duplicate exclusion; no heldout labels, scores or new teacher inference"
+}

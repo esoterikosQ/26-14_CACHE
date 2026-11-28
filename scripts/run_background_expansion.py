@@ -1,7 +1,9 @@
 """Run a bounded, nested-background experiment inside a remote tmux session."""
 
 import argparse
-from collections import Counter
+from collections import Counter, deque
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from dataclasses import asdict
 from datetime import datetime
 import gc
@@ -57,7 +59,39 @@ def expanded_background(existing, candidates, target, seed):
     return background + additional, rejected
 
 
+def prepare_dataset_background(plan, config, run):
+    """Hard-link a dataset's verified background.jsonl into the run; no sampling or deduplication here."""
+    started = time.perf_counter()
+    dataset = Path(config["work_root"]) / config["dataset_directory"] / config.get("dataset_id", config["run_id"])
+    manifest = json.loads((dataset / "manifest.json").read_text())
+    if manifest.get("status") != "prepared":
+        raise ValueError("Dataset manifest is not prepared")
+    spec = manifest["splits"]["background"]
+    source_path = dataset / "background.jsonl"
+    if file_hash(source_path) != spec["file_sha256"]:
+        raise ValueError("Dataset background hash mismatch")
+    path = run / "background.jsonl"
+    os.link(source_path, path)
+    report = {
+        "status": "prepared", "run_id": plan["run_id"], "documents": spec["documents"], "utf8_bytes": spec["utf8_bytes"],
+        "file_sha256": spec["file_sha256"], "preparation_backend": "dataset_background_v1",
+        "dataset": str(dataset), "dataset_manifest_sha256": file_hash(dataset / "manifest.json"),
+        "original_split_hashes": {name: details["file_sha256"] for name, details in manifest["splits"].items()},
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    write_json(run / "data_preparation.json", report)
+    return report
+
+
 def prepare(plan, config, run, baseline, source):
+    backend = plan.get("preparation_backend", "python_memory_v1")
+    if backend == "sqlite_cpp_v1":
+        from scripts.prepare_disk_background import prepare_disk
+        return prepare_disk(plan, config, run, baseline, source)
+    if backend == "dataset_background_v1":
+        return prepare_dataset_background(plan, config, run)
+    if backend != "python_memory_v1":
+        raise ValueError(f"Unknown preparation backend: {backend}")
     from huggingface_hub import HfFileSystem
     import pyarrow.parquet as parquet
 
@@ -161,16 +195,82 @@ def build_blocks(plan, config, run, source, preparation):
     directory = run / "background_blocks"
     directory.mkdir(exist_ok=False)
     count_config = CountConfig(max_context=8)
-    table = CountTable(count_config)
+    backend = plan.get("count_backend", "python")
+    if backend not in ("python", "cpp_v1"):
+        raise ValueError(f"Unknown count backend: {backend}")
+    native = pool = None
+    workers = 1
+    pending = deque()
+    if backend == "cpp_v1":
+        workers = plan.get("count_workers")
+        if type(workers) is not int or workers < 1:
+            raise ValueError("count_workers must be a positive integer for cpp_v1")
+        from scripts.native_counts import NativeCounts, build_native_counts
+        native = NativeCounts(build_native_counts(run / "native_counts"))
+    table = CountTable(count_config) if native is None else None
+    block_texts = []
     blocks = []
     documents = input_ids = block_bytes = block_documents = total_bytes = total_storage = 0
     budgets = config["budgets"]
+    reused = None
+    parent_path = None
+    if type(plan.get("reuse_parent_blocks", False)) is not bool:
+        raise ValueError("reuse_parent_blocks must be an explicit boolean")
+    if plan.get("reuse_parent_blocks"):
+        parent = Path(config["work_root"]) / plan["parent_background_run_directory"]
+        report_path = parent / "background_build.json"
+        if file_hash(report_path) != plan["parent_background_report_sha256"]:
+            raise ValueError("Pinned parent block report changed")
+        parent_report = json.loads(report_path.read_text())
+        parent_preparation = json.loads((parent / "data_preparation.json").read_text())
+        parent_path = parent / "background.jsonl"
+        if file_hash(parent_path) != parent_preparation["file_sha256"]:
+            raise ValueError("Parent background source changed")
+        if (parent_report["status"] != "built" or parent_report["storage"] != "document_blocks_v1"
+                or parent_report["count_config"] != asdict(count_config)
+                or block_manifest_hash(parent_report["blocks"]) != parent_report["table_sha256"]
+                or any(parent_report[key] != parent_preparation[key] for key in ("documents", "utf8_bytes"))):
+            raise ValueError("Parent block contract changed")
+        for block in parent_report["blocks"]:
+            path = Path(block["table_path"])
+            if file_hash(path) != block["table_sha256"] or path.stat().st_size != block["table_bytes"]:
+                raise ValueError("Parent block artifact changed")
+        if any(sum(block[key] for block in parent_report["blocks"]) != parent_report[key] for key in ("documents", "utf8_bytes")):
+            raise ValueError("Parent block totals changed")
+        blocks.extend(parent_report["blocks"])
+        total_storage = sum(block["table_bytes"] for block in blocks)
+        reused = {"run": str(parent), "report_sha256": file_hash(report_path), "blocks": len(blocks),
+                  "table_bytes": total_storage, "documents": parent_report["documents"], "utf8_bytes": parent_report["utf8_bytes"]}
+        record_progress(plan, run, source, "Parent blocks verified for explicit reuse", reused, started)
+
+    def check_storage():
+        storage = sum(path.stat().st_size for path in run.rglob("*") if path.is_file())
+        if storage > budgets["maximum_new_artifact_storage_gib"] * 2**30:
+            raise RuntimeError("Background storage budget exceeded")
+        if shutil.disk_usage(Path(config["work_root"])).free < budgets["minimum_free_disk_gib"] * 2**30:
+            raise RuntimeError("Disk headroom budget exhausted")
 
     def save_block():
-        nonlocal table, block_bytes, block_documents, total_storage
+        nonlocal table, block_bytes, block_documents, total_storage, block_texts
         root = Path(config["work_root"])
         if shutil.disk_usage(root).free < budgets["minimum_free_disk_gib"] * 2**30:
             raise RuntimeError("Disk headroom budget exhausted")
+        if native is not None:
+            path = directory / f"block-{len(blocks) + len(pending):05d}.jsonl"
+            if plan.get("compress_background_blocks"):
+                path = path.with_suffix(".jsonl.gz")
+            texts = block_texts
+
+            def build_native_block():
+                statistics = native.build_block(texts, count_config, path, 1 if plan.get("compress_background_blocks") else 0)
+                return statistics, file_hash(path), path.stat().st_size
+
+            pending.append((path, pool.submit(build_native_block), block_documents, block_bytes, documents, total_bytes))
+            block_texts = []
+            block_bytes = block_documents = 0
+            while len(pending) > workers:
+                finish_native_block()
+            return
         path = directory / f"block-{len(blocks):05d}.jsonl"
         table.freeze().save(path)
         uncompressed_bytes = path.stat().st_size
@@ -193,40 +293,79 @@ def build_blocks(plan, config, run, source, preparation):
         total_storage += metadata["table_bytes"]
         record_progress(plan, run, source, "Background block saved", {**metadata, "completed_documents": documents, "completed_utf8_bytes": total_bytes, "peak_host_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}, started)
         print(json.dumps({"stage": "build_block", "blocks": len(blocks), "documents": documents, "utf8_bytes": total_bytes, "peak_host_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}), flush=True)
-        if total_storage > budgets["maximum_new_artifact_storage_gib"] * 2**30 or shutil.disk_usage(root).free < budgets["minimum_free_disk_gib"] * 2**30:
-            raise RuntimeError("Background storage budget exceeded")
+        check_storage()
         table = None
         gc.collect()
         table = CountTable(count_config)
         block_bytes = block_documents = 0
 
-    with (run / "background.jsonl").open() as stream:
+    def finish_native_block():
+        nonlocal total_storage
+        path, future, block_document_count, block_byte_count, completed_documents, completed_bytes = pending.popleft()
+        statistics, table_sha256, table_bytes = future.result()
+        metadata = {
+            "table_path": str(path), "table_sha256": table_sha256, "table_bytes": table_bytes,
+            "compression": "gzip" if plan.get("compress_background_blocks") else "none",
+            "uncompressed_table_bytes": statistics["uncompressed_table_bytes"],
+            "documents": block_document_count, "utf8_bytes": block_byte_count,
+            "contexts": statistics["contexts"], "edges": statistics["edges"],
+        }
+        write_json(path.with_suffix(".metadata.json"), metadata)
+        blocks.append(metadata)
+        total_storage += metadata["table_bytes"]
+        record_progress(plan, run, source, "Background block saved", {**metadata, "completed_documents": completed_documents, "completed_utf8_bytes": completed_bytes, "peak_host_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}, started)
+        print(json.dumps({"stage": "build_block", "blocks": len(blocks), "documents": completed_documents, "utf8_bytes": completed_bytes, "peak_host_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}), flush=True)
+        check_storage()
+
+    with ExitStack() as stack:
+        if native is not None:
+            pool = stack.enter_context(ThreadPoolExecutor(workers))
+        stream = stack.enter_context((run / "background.jsonl").open())
+        parent_stream = stack.enter_context(parent_path.open()) if parent_path is not None else None
         for line in stream:
             document = json.loads(line)
             raw = document["text"].encode("utf-8")
             if hashlib.sha256(raw).hexdigest() != document["text_sha256"]:
                 raise ValueError("Source text hash mismatch")
-            table.add_document([1] + [value + 4 for value in raw])
             documents += 1
             input_ids += len(raw) + 1
             total_bytes += len(raw)
+            if reused and documents <= reused["documents"]:
+                original_line = next(parent_stream, None)
+                if original_line is None or document != json.loads(original_line):
+                    raise ValueError("Expanded source changed the parent prefix")
+                if documents == reused["documents"] and total_bytes != reused["utf8_bytes"]:
+                    raise ValueError("Parent source byte total changed")
+                continue
+            if native is None:
+                table.add_document([1] + [value + 4 for value in raw])
+            else:
+                block_texts.append(raw)
             block_bytes += len(raw)
             block_documents += 1
             if block_bytes >= block_limit:
                 save_block()
-    if block_documents:
-        save_block()
+        if reused and (documents < reused["documents"] or next(parent_stream, None) is not None):
+            raise ValueError("Parent source document total changed")
+        if block_documents:
+            save_block()
+        while pending:
+            finish_native_block()
     if documents != preparation["documents"] or total_bytes != preparation["utf8_bytes"]:
         raise ValueError("Background totals mismatch")
+    check_storage()
     report = {
         "status": "built", "run_id": plan["run_id"], "storage": "document_blocks_v1",
         "count_config": asdict(count_config), "documents": documents, "input_ids": input_ids,
         "utf8_bytes": total_bytes, "blocks": blocks, "table_sha256": block_manifest_hash(blocks),
         "table_bytes": total_storage, "block_context_rows": sum(block["contexts"] for block in blocks),
+        "reused_parent": reused, "new_table_bytes": total_storage - (reused["table_bytes"] if reused else 0),
         "protocol": "Whole documents per block; BOS plus UTF-8 IDs, no appended EOS; no pruning. Repeated contexts are summed across blocks, not distinct global context counts.",
         "elapsed_seconds": time.perf_counter() - started,
         "peak_host_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
     }
+    if native is not None:
+        report.update(count_backend=backend, count_workers=workers, native_library_sha256=file_hash(native.library_path))
     write_json(run / "background_build.json", report)
     return report
 
@@ -274,8 +413,12 @@ def build(plan, config, run, baseline, source):
 def comparison_parent(plan, config, baseline):
     if plan.get("comparison_run_directory"):
         parent = Path(config["work_root"]) / plan["comparison_run_directory"]
-        return parent, parent / "fit/report.json"
-    return baseline, baseline / "fits/k8_wunlimited/report.json"
+        report_path = parent / "fit/report.json"
+    else:
+        parent, report_path = baseline, baseline / "fits/k8_wunlimited/report.json"
+    if plan.get("parent_fit_report_sha256") and file_hash(report_path) != plan["parent_fit_report_sha256"]:
+        raise ValueError("Pinned parent fit report changed")
+    return parent, report_path
 
 
 def verify(plan, config, run, baseline, source):
@@ -307,7 +450,10 @@ def verify(plan, config, run, baseline, source):
         full = load_background(background_report)
         block = {"table_path": background_report["table_path"], "table_sha256": background_report["table_sha256"]}
         blocked = {"storage": "document_blocks_v1", "blocks": [block], "table_sha256": block_manifest_hash([block]), "count_config": background_report["count_config"]}
-    projected = load_background(blocked, required)
+    progress = None
+    if plan.get("capture_validation_replay"):
+        progress = lambda stage, details: record_progress(plan, run, source, stage, details, started)
+    projected = load_background(blocked, required, progress=progress)
     rule = BoundaryRule(**previous["selected_rule"])
     for index, chunk in zip(selected_indices, train):
         features, mask = teacher_features(chunk["input_ids"], chunk["labels"], config=count_config, mean_patch_length=rule.mean_patch_length, background=projected)
@@ -321,13 +467,28 @@ def verify(plan, config, run, baseline, source):
         original, original_counts = evaluate_threshold(validation, count_config, rule, full, details=True)
     else:
         original, original_counts = previous["validation"], np.asarray(previous["validation_document_counts"])
-    reduced, reduced_counts = evaluate_threshold(validation, count_config, rule, projected, details=True)
+    replay = {}
+    reduced, reduced_counts = evaluate_threshold(validation, count_config, rule, projected, details=True, replay=replay)
     if original["document_ids"] != reduced["document_ids"]:
         raise ValueError("Parent validation document order changed")
     np.testing.assert_array_equal(original_counts, reduced_counts)
-    for key in ("f1", "entropy_mae", "entropy_rmse", "log_loss", "auprc_average_precision"):
-        if original[key] != reduced[key] or original[key] != previous["validation"][key]:
-            raise ValueError("Projected background changed baseline validation")
+    metric_keys = ("f1", "entropy_mae", "entropy_rmse", "log_loss", "auprc_average_precision")
+    mismatches = {key: {"reference": original[key], "replayed": reduced[key], "saved": previous["validation"][key],
+                        "absolute_difference": abs(original[key] - reduced[key])}
+                  for key in metric_keys if original[key] != reduced[key] or original[key] != previous["validation"][key]}
+    if mismatches or plan.get("capture_validation_replay"):
+        replay_path = run / "validation_replay.npz"
+        with replay_path.open("xb") as stream:
+            np.savez_compressed(stream, **replay)
+        write_json(run / "validation_replay_mismatch.json", {
+            "status": "failed" if mismatches else "verified", "mismatches": mismatches, "all_metrics": {key: {"reference": original[key], "replayed": reduced[key]} for key in metric_keys},
+            "document_counts_equal": True, "training_feature_chunks_equal": len(train),
+            "parent_report_sha256": file_hash(previous_path), "replay_sha256": file_hash(replay_path),
+            "numpy_version": np.__version__, "elapsed_seconds": time.perf_counter() - started,
+            "thread_environment": {name: os.environ.get(name) for name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")},
+        })
+    if mismatches:
+        raise ValueError(f"Projected background changed baseline validation: {json.dumps(mismatches)}")
     report = {
         "status": "verified", "parent_report_sha256": file_hash(previous_path),
         "validation_f1": original["f1"], "validation_documents": len(original_counts),
@@ -339,6 +500,20 @@ def verify(plan, config, run, baseline, source):
     }
     write_json(run / "storage_equivalence.json", report)
     return report
+
+
+def native_loader(plan, run, root):
+    if plan.get("count_backend", "python") != "cpp_v1":
+        return {}
+    from scripts.native_counts import NativeCounts, load_projection
+    workers = plan.get("load_workers")
+    if type(workers) is not int or workers < 1:
+        raise ValueError("load_workers must be a positive integer for cpp_v1")
+    library = run / "native_counts" / ("count_blocks.dylib" if sys.platform == "darwin" else "count_blocks.so")
+    options = {"native": NativeCounts(library), "workers": workers}
+    if plan.get("parent_projection_report"):
+        options["seed"] = load_projection(root / plan["parent_projection_report"], plan["parent_projection_report_sha256"])
+    return options
 
 
 def compare(plan, config, run, baseline, source):
@@ -355,7 +530,7 @@ def compare(plan, config, run, baseline, source):
         raise ValueError("Baseline background changed")
     chunks = load_chunks(baseline, "validation", labels)
     required = query_contexts(chunks, CountConfig(**previous["count_config"]))
-    table = load_background(background_report, required)
+    table = load_background(background_report, required, **native_loader(plan, run, Path(config["work_root"])))
     metrics, old_counts = evaluate_threshold(chunks, CountConfig(**previous["count_config"]), BoundaryRule(**previous["selected_rule"]), table, details=True)
     if abs(metrics["f1"] - previous["validation"]["f1"]) > 1e-12:
         raise ValueError("Baseline F1 replay mismatch")
@@ -385,6 +560,16 @@ def compare(plan, config, run, baseline, source):
     return report
 
 
+def validate_numerical_environment(plan):
+    threads = plan.get("openblas_num_threads")
+    if threads is None:
+        return
+    if type(threads) is not int or threads < 1:
+        raise ValueError("openblas_num_threads must be a positive integer")
+    if os.environ.get("OPENBLAS_NUM_THREADS") != str(threads):
+        raise RuntimeError(f"Launch Python with OPENBLAS_NUM_THREADS={threads} before NumPy import")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
@@ -392,11 +577,24 @@ def main():
     args = parser.parse_args()
     source = Path(__file__).resolve().parents[1]
     plan = json.loads(args.plan.read_text())
+    validate_numerical_environment(plan)
     config_path = source / plan["baseline_config"]
     config = json.loads(config_path.read_text())
+    overrides = plan.get("budget_overrides", {})
+    if set(overrides) - {"maximum_new_artifact_storage_gib", "minimum_free_disk_gib"} or any(
+            type(value) is not int or value < 1 for value in overrides.values()):
+        raise ValueError("budget_overrides may only set positive integer storage budgets")
+    config["budgets"] = {**config["budgets"], **overrides}
     root = Path(config["work_root"])
     run = root / "runs" / plan["run_id"]
     baseline = root / config["run_directory"]
+    if plan.get("parent_fit_report_sha256"):
+        comparison_parent(plan, config, baseline)
+    if plan.get("completed_t08_t09_run_directory"):
+        analysis_path = root / plan["completed_t08_t09_run_directory"] / "result.json"
+        if (file_hash(analysis_path) != plan["completed_t08_t09_analysis_sha256"]
+                or json.loads(analysis_path.read_text())["status"] != "completed"):
+            raise ValueError("T08/T09 completion gate changed")
     resource.setrlimit(resource.RLIMIT_AS, (config["budgets"]["peak_host_ram_gib"] * 2**30,) * 2)
     if args.stage:
         result = {"verify": verify, "prepare": prepare, "build": build, "compare": compare}[args.stage](plan, config, run, baseline, source)
@@ -414,9 +612,17 @@ def main():
     def record(stage, details):
         record_progress(plan, run, source, stage, details, started)
 
-    report = {"run_id": plan["run_id"], "status": "running", "plan_sha256": file_hash(args.plan), "baseline_config_sha256": file_hash(config_path), "stages": []}
+    report = {"run_id": plan["run_id"], "status": "running", "plan_sha256": file_hash(args.plan), "baseline_config_sha256": file_hash(config_path), "stages": [],
+              "effective_budgets": config["budgets"], "budget_overrides": overrides,
+              "numerical_environment": {name: os.environ.get(name) for name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")}}
     report["code_sha256"] = {str(path.relative_to(source)): file_hash(path) for path in (Path(__file__).resolve(), source / "scripts/fit_count_patcher.py", source / "src/phdq_blt_cache/count_patcher.py")}
-    record("Started", {"target_utf8_bytes": plan["background_utf8_bytes"], "next": "Nested background sampling", "wall_clock_limit": None, "host_ram_gib": config["budgets"]["peak_host_ram_gib"]})
+    if plan.get("preparation_backend") == "sqlite_cpp_v1":
+        for name in ("scripts/prepare_disk_background.py", "scripts/disk_dedup.py", "scripts/native_minhash.py", "scripts/native/minhash.cpp", "scripts/prepare_english_data.py"):
+            report["code_sha256"][name] = file_hash(source / name)
+    if plan.get("count_backend") == "cpp_v1":
+        for name in ("scripts/native_counts.py", "scripts/native/count_blocks.cpp"):
+            report["code_sha256"][name] = file_hash(source / name)
+    record("Started", {"target_utf8_bytes": plan["background_utf8_bytes"], "next": "Nested background sampling", "wall_clock_limit": None, "host_ram_gib": config["budgets"]["peak_host_ram_gib"], "numerical_environment": report["numerical_environment"]})
     try:
         stages = [("prepare", "data_preparation.json"), ("build", "background_build.json"), ("fit", "fit/report.json"), ("compare", "comparison.json")]
         if plan.get("verify_projection"):
@@ -426,6 +632,13 @@ def main():
             command = [sys.executable, "-m", "scripts.run_background_expansion", "--plan", str(args.plan.resolve()), "--stage", stage]
             if stage == "fit":
                 command = [sys.executable, "-m", "scripts.fit_count_patcher", "--config", str(config_path), "--window", "unlimited", "--background-report", str(run / "background_build.json"), "--output-directory", str(run / "fit"), "--progress-log", str(log_path), "--no-time-limit"]
+                if plan.get("count_backend") == "cpp_v1":
+                    library = run / "native_counts" / ("count_blocks.dylib" if sys.platform == "darwin" else "count_blocks.so")
+                    command += ["--count-backend", "cpp_v1", "--native-count-library", str(library),
+                                "--load-workers", str(plan["load_workers"]), "--save-projection"]
+                    if plan.get("parent_projection_report"):
+                        command += ["--parent-projection", str(root / plan["parent_projection_report"]),
+                                    "--parent-projection-sha256", plan["parent_projection_report_sha256"]]
             subprocess.run(command, cwd=source, check=True)
             result = json.loads((run / artifact).read_text())
             report["stages"].append({"stage": stage, "artifact": str(run / artifact), "sha256": file_hash(run / artifact)})

@@ -1,0 +1,18 @@
+{
+  "run_id": "ko-patcher-t14-20261127-01",
+  "baseline_config": "experiments/korean_patcher_t14.json",
+  "background_utf8_bytes": 50000000000,
+  "preparation_backend": "dataset_background_v1",
+  "background_block_utf8_bytes": 25000000,
+  "compress_background_blocks": true,
+  "reuse_parent_blocks": false,
+  "count_backend": "cpp_v1",
+  "count_workers": 8,
+  "load_workers": 8,
+  "budget_overrides": {
+    "maximum_new_artifact_storage_gib": 300,
+    "minimum_free_disk_gib": 30
+  },
+  "openblas_num_threads": 8,
+  "tmux_session": "blt-ko-t14-20261127-01"
+}

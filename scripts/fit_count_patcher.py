@@ -1,6 +1,7 @@
 """T07/T08 initial two-configuration screen; all thresholds use fresh rollouts."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import datetime
 import gzip
@@ -79,7 +80,7 @@ def block_manifest_hash(blocks):
     return hashlib.sha256(json.dumps(blocks, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def load_background(report, required=None, progress=None):
+def load_background(report, required=None, progress=None, *, native=None, workers=1, seed=None, projection_sink=None):
     if report.get("storage") != "document_blocks_v1":
         if file_hash(report["table_path"]) != report["table_sha256"]:
             raise ValueError("Background table hash mismatch")
@@ -87,6 +88,8 @@ def load_background(report, required=None, progress=None):
     blocks = report["blocks"]
     if block_manifest_hash(blocks) != report["table_sha256"]:
         raise ValueError("Background block manifest hash mismatch")
+    if native is not None:
+        return load_background_native(report, required, progress, native, workers, seed, projection_sink)
     table = CountTable(CountConfig(**report["count_config"]))
     for block in blocks:
         if file_hash(block["table_path"]) != block["table_sha256"]:
@@ -109,7 +112,39 @@ def load_background(report, required=None, progress=None):
     return table.freeze()
 
 
-def evaluate_threshold(chunks, config, rule, background, details=False):
+def load_background_native(report, required, progress, native, workers, seed, projection_sink):
+    if required is None:
+        raise ValueError("Native projection requires explicit required contexts")
+    blocks = report["blocks"]
+    config = CountConfig(**report["count_config"])
+    if any(block.get("compression", "none") not in ("none", "gzip") for block in blocks):
+        raise ValueError("Unsupported background compression")
+    start, seeded = 0, None
+    if seed is not None:
+        projection, seed_required, seed_report = seed
+        start = seed_report["blocks"]
+        if (seed_report["count_config"] != report["count_config"] or type(start) is not int or not 0 < start <= len(blocks)
+                or block_manifest_hash(blocks[:start]) != seed_report["block_manifest_sha256"]):
+            raise ValueError("Parent projection does not match the background block prefix")
+        if not set(required) <= seed_required:
+            raise ValueError("Required contexts exceed the parent projection")
+        seeded = projection
+    expected = {str(Path(block["table_path"])): block["table_sha256"] for block in blocks}
+
+    def verify(path):
+        if file_hash(path) != expected[str(path)]:
+            raise ValueError("Background block hash mismatch")
+
+    with ThreadPoolExecutor(workers) as pool:
+        list(pool.map(verify, [Path(block["table_path"]) for block in blocks[:start]]))
+    projection, skipped = native.project([Path(block["table_path"]) for block in blocks[start:]], required, config,
+                                         workers=workers, seed=seeded, verify=verify, progress=progress)
+    if projection_sink is not None:
+        projection_sink(projection, {"seed_blocks": start, "seed_contexts_filtered": skipped})
+    return projection.to_table(config)
+
+
+def evaluate_threshold(chunks, config, rule, background, details=False, replay=None):
     by_document = {}
     scores, labels, predicted_entropy, teacher_entropy = [], [], [], []
     patch_counts = []
@@ -148,6 +183,9 @@ def evaluate_threshold(chunks, config, rule, background, details=False):
         mean_absolute_chunk_patch_count_error=float(np.abs(patch_counts[:, 0] - patch_counts[:, 1]).mean()),
     )
     metrics["document_ids"] = list(by_document)
+    if replay is not None:
+        replay.update(scores=scores, labels=labels, predicted_entropy=predicted_entropy,
+                      teacher_entropy=teacher_entropy, document_counts=np.asarray(list(by_document.values())))
     return metrics, np.asarray(list(by_document.values()))
 
 
@@ -159,14 +197,29 @@ def main():
     parser.add_argument("--output-directory", type=Path)
     parser.add_argument("--progress-log", type=Path)
     parser.add_argument("--no-time-limit", action="store_true")
+    parser.add_argument("--count-backend", choices=("python", "cpp_v1"), default="python")
+    parser.add_argument("--native-count-library", type=Path)
+    parser.add_argument("--load-workers", type=int, default=1)
+    parser.add_argument("--parent-projection", type=Path)
+    parser.add_argument("--parent-projection-sha256")
+    parser.add_argument("--save-projection", action="store_true")
     args = parser.parse_args()
+    if args.count_backend == "cpp_v1" and args.native_count_library is None:
+        parser.error("--count-backend cpp_v1 requires --native-count-library")
+    if args.count_backend == "python" and (args.parent_projection or args.save_projection or args.load_workers != 1):
+        parser.error("Projection reuse, saving and load workers require --count-backend cpp_v1")
+    if (args.parent_projection is None) != (args.parent_projection_sha256 is None) or args.load_workers < 1:
+        parser.error("Parent projection needs its pinned SHA256 and load workers must be positive")
     config = json.loads(args.config.read_text())
     budgets = config["budgets"]
     resource.setrlimit(resource.RLIMIT_AS, (budgets["peak_host_ram_gib"] * 2**30,) * 2)
     run = Path(config["work_root"]) / config["run_directory"]
-    pilot = json.loads((run / "count_pilot.json").read_text())
+    if "screened_configurations" in config:
+        screened = config["screened_configurations"]
+    else:
+        screened = json.loads((run / "count_pilot.json").read_text())["screened_configurations"]
     window = None if args.window == "unlimited" else int(args.window)
-    if {"max_context": 8, "window": window} not in pilot["screened_configurations"]:
+    if {"max_context": 8, "window": window} not in screened:
         raise ValueError("Configuration did not pass T05")
     destination = args.output_directory or run / "fits" / f"k8_w{args.window}"
     destination.mkdir(parents=True, exist_ok=False)
@@ -213,11 +266,31 @@ def main():
             train_chunks = load_chunks(run, "train", label_report)
             validation_chunks = load_chunks(run, "validation", label_report)
             required = None
+            native = seed = sink = None
             if background_report.get("storage") == "document_blocks_v1":
                 required = query_contexts(train_chunks + validation_chunks, count_config)
                 report["background_loading"] = {"storage": "document_blocks_v1", "required_contexts": len(required), "scope": "Exact row sums for every prefix of fixed train/validation inputs, including virtual slots; all counts preserved in disk blocks; not a timing benchmark or general-purpose loaded model"}
-            background = load_background(background_report, required, progress)
-            del required
+                if args.count_backend == "cpp_v1":
+                    from scripts.native_counts import NativeCounts, load_projection, save_projection
+                    native = NativeCounts(args.native_count_library)
+                    report["background_loading"].update(backend="cpp_v1", workers=args.load_workers,
+                                                        native_library_sha256=file_hash(args.native_count_library))
+                    if args.parent_projection is not None:
+                        seed = load_projection(args.parent_projection, args.parent_projection_sha256)
+                        report["background_loading"]["parent_projection"] = {
+                            "report": str(args.parent_projection), "report_sha256": args.parent_projection_sha256,
+                            "blocks": seed[2]["blocks"], "contexts": seed[2]["contexts"]}
+                    if args.save_projection:
+                        def sink(projection, details):
+                            report["background_loading"].update(details)
+                            path, saved = save_projection(destination / "background_projection.npz", projection, required, {
+                                "count_config": background_report["count_config"], "blocks": len(background_report["blocks"]),
+                                "block_manifest_sha256": background_report["table_sha256"],
+                                "background_report_sha256": file_hash(background_report_path)})
+                            report["background_loading"]["saved_projection"] = {"report": str(path), "report_sha256": file_hash(path), "arrays_sha256": saved["arrays_sha256"]}
+            background = load_background(background_report, required, progress, native=native,
+                                         workers=args.load_workers, seed=seed, projection_sink=sink)
+            del required, seed
             report["background_load_seconds"] = time.perf_counter() - started
             report["background_sha256"] = background_report["table_sha256"]
             progress("Background loaded and verified", {"seconds": report["background_load_seconds"], "sha256": report["background_sha256"]})
@@ -290,8 +363,9 @@ def main():
                 chunk = next(chunk for chunk in validation_chunks if chunk["document_id"] == item["document_id"] and chunk["byte_offset"] == 0)
                 decision = rollout(chunk["input_ids"][:item["prefix_input_ids"]], config=count_config, rule=rule, background=background)[-1]
                 report["prefix_diagnostics"].append({**item, "candidate_entropy": decision.entropy, "candidate_label": decision.boundary})
+            gate = config["gates"].get("minimum_validation_f1")
             report.update(
-                status="validation_gate_passed" if metrics["f1"] >= config["gates"]["minimum_validation_f1"] else "validation_gate_failed",
+                status="fitted" if gate is None else "validation_gate_passed" if metrics["f1"] >= gate else "validation_gate_failed",
                 selected_rule=asdict(rule), validation=metrics,
                 remaining="No ablations, full-BLT BPB/timing, or heldout evaluation performed",
             )

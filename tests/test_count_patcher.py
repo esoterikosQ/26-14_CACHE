@@ -25,6 +25,433 @@ def oracle_counts(tokens, maximum, window, eos_id):
 
 @unittest.skipUnless(importlib.util.find_spec("numpy"), "NumPy is an opt-in patcher dependency")
 class CountPatcherTests(unittest.TestCase):
+    def test_analysis_ablation_refits_and_cached_rollout_uses_own_boundaries(self):
+        import numpy as np
+        from phdq_blt_cache.count_patcher import BoundaryRule, CountConfig, CountTable, rollout, teacher_features
+        from scripts.analyze_count_patcher import cached_rollout, count_features, evaluate_cached, fit_ablation, fixed_training_features, metrics_with_f05, paired_intervals, stratum_diagnostics
+
+        config = CountConfig()
+        background = CountTable(config).freeze()
+        tokens = [1] + [value + 4 for value in b"abc abc abc abc"]
+        rule = BoundaryRule((-3., .2, .1, 1., .2), 4.5, .375)
+        expected = rollout(tokens, config=config, rule=rule, background=background)
+        entropy = np.asarray([item.entropy for item in expected])
+        repeated = np.asarray([item.repeated_length for item in expected])
+        boundaries, scores, distances = cached_rollout(entropy, repeated, rule)
+        np.testing.assert_array_equal(boundaries, [item.boundary for item in expected])
+        np.testing.assert_array_equal(scores, [item.score for item in expected])
+        np.testing.assert_array_equal(distances, [item.distance for item in expected])
+        other_rule = BoundaryRule(rule.coefficients, rule.mean_patch_length, 1.)
+        alternative = rollout(tokens, config=config, rule=other_rule, background=background)
+        actual = cached_rollout(entropy, repeated, other_rule)
+        np.testing.assert_array_equal(actual[0], [item.boundary for item in alternative])
+        np.testing.assert_array_equal(actual[1], [item.score for item in alternative])
+        np.testing.assert_array_equal(actual[2], [item.distance for item in alternative])
+        self.assertFalse(np.array_equal(actual[0], boundaries))
+        features, mask = teacher_features(tokens, boundaries, config=config, mean_patch_length=4.5, background=background)
+        original = features.copy()
+        chunk = {"input_ids": np.asarray(tokens), "labels": boundaries, "entropy": entropy,
+                 "document_id": "fixture", "byte_offset": 0, "byte_length": len(tokens) - 1}
+        cached_entropy, cached_repeated = count_features(chunk["input_ids"], config, background)
+        np.testing.assert_array_equal(cached_entropy, entropy)
+        np.testing.assert_array_equal(cached_repeated, repeated)
+        np.testing.assert_array_equal(fixed_training_features(chunk, entropy, repeated, 4.5), features[mask])
+        measured, records = evaluate_cached([chunk], [(entropy, repeated)], rule, details=True)
+        self.assertEqual(measured["f1"], 1.)
+        self.assertEqual(measured["tp"], int(boundaries[2:].sum()))
+        diagnostics = stratum_diagnostics([chunk], records, rule.threshold, 1.3359375)
+        for axis in ("document_position", "document_length", "repeated_suffix", "candidate_distance", "teacher_margin", "candidate_margin"):
+            self.assertEqual(sum(value["positions"] for key, value in diagnostics["strata"].items() if key.startswith(axis + ":")), len(tokens) - 1)
+        self.assertEqual(diagnostics["candidate_patch_count"], int(boundaries.sum()))
+        self.assertEqual(diagnostics["entropy_mae"], 0.)
+        fitted = fit_ablation(features[mask], boundaries[mask], [1, 2, 4], rho=.001)
+        self.assertEqual([fitted["coefficients"][column] for column in (1, 2, 4)], [0., 0., 0.])
+        np.testing.assert_array_equal(original, features)
+        self.assertAlmostEqual(metrics_with_f05([2, 1, 3])["f0_5"], 2.5 / 4.25)
+        counts = np.asarray([[2, 1, 3], [4, 2, 1]])
+        self.assertEqual(paired_intervals(counts, counts, replicates=20), {"f1": [0., 0.], "f0_5": [0., 0.]})
+        with self.assertRaises(ValueError):
+            fit_ablation(features[mask], boundaries[mask], [0], rho=.001)
+
+    def test_teacher_prefix_diagnostic_separates_virtual_and_past_labels(self):
+        import numpy as np
+        from scripts.diagnose_teacher_prefix_labels import compare_teacher_prefixes
+
+        token_ids = np.asarray([1, 100, 101, 102, 103], dtype=np.uint16)
+        full = np.asarray([0., 0., .5, 2., .25, 2.], dtype=np.float32)
+
+        def evaluate(current):
+            entropy = full[:len(current) + 1].copy()
+            if len(current) == 2:
+                entropy[2] = 1.5
+            if len(current) == 3:
+                entropy[2], entropy[3] = 1.5, .5
+            labels = entropy > 1.
+            labels[:2] = True
+            return entropy, labels
+
+        result, arrays = compare_teacher_prefixes(token_ids, evaluate)
+        self.assertEqual(result["endpoint_positions"], 4)
+        self.assertEqual(result["endpoint_mismatches"], 2)
+        self.assertEqual(result["past_positions"], 6)
+        self.assertEqual(result["past_mismatches"], 1)
+        self.assertEqual(result["all_visible_positions"], 10)
+        self.assertEqual(result["all_visible_mismatches"], 3)
+        self.assertEqual(result["endpoint_mismatch_rate"], .5)
+        self.assertEqual(result["all_visible_mismatch_rate"], .3)
+        self.assertTrue(result["same_input_replay_exact"])
+        for row_index, length in enumerate(range(2, 6)):
+            actual = np.unpackbits(arrays["prefix_labels_packed_little"][row_index], bitorder="little")
+            np.testing.assert_array_equal(actual[:length + 1], evaluate(token_ids[:length])[1])
+        with self.assertRaises(ValueError):
+            compare_teacher_prefixes(token_ids[:1], evaluate)
+
+    def test_lookup_returns_counts_and_total_without_inserting_missing_context(self):
+        from phdq_blt_cache.count_patcher import CountConfig, CountTable
+
+        table = CountTable(CountConfig())
+        table.add_document([1, 4, 5, 4, 2])
+        table.freeze()
+        before = table.to_dict()
+        for context, expected in table._rows.items():
+            row, total = table.lookup(context)
+            self.assertEqual(row, expected)
+            self.assertEqual(total, sum(expected.values()))
+        self.assertEqual(table.lookup(b"missing"), ({}, 0))
+        self.assertEqual(table.to_dict(), before)
+
+    @unittest.skipUnless(importlib.util.find_spec("lmdb"), "LMDB is an opt-in background dependency")
+    def test_lmdb_counts_match_unrestricted_memory_background(self):
+        from dataclasses import asdict
+        import gzip
+        import hashlib
+        import numpy as np
+        from phdq_blt_cache.count_patcher import BoundaryRule, CountConfig, CountModel, CountTable, rollout
+        from phdq_blt_cache.lmdb_counts import LMDBCountTable, build_lmdb_background
+
+        config = CountConfig(max_context=3)
+        full = CountTable(config)
+        documents = [[1, 4, 5, 4, 6, 2, 4], [1, 8, 9, 8, 259], [1, 4, 5, 8, 2]]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blocks = []
+            for index, tokens in enumerate(documents):
+                full.add_document(tokens)
+                table = CountTable(config)
+                table.add_document(tokens)
+                path = root / f"block-{index}.jsonl.gz"
+                with gzip.open(path, "wt") as stream:
+                    stream.write(json.dumps({"version": 1, "config": asdict(config)}) + "\n")
+                    for context, row in table._rows.items():
+                        stream.write(json.dumps([context.hex(), list(row.items())]) + "\n")
+                blocks.append({"table_path": str(path), "table_sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "compression": "gzip"})
+            full.freeze()
+            report = root / "background.json"
+            payload = {"storage": "document_blocks_v1", "blocks": blocks, "count_config": asdict(config),
+                       "table_sha256": hashlib.sha256(json.dumps(blocks, sort_keys=True).encode()).hexdigest()}
+            report.write_text(json.dumps(payload))
+            output = root / "background.lmdb"
+            result = build_lmdb_background(report, output, map_size_bytes=4 * 1024 ** 2, batch_rows=2)
+            self.assertTrue(result["complete_source"])
+            self.assertEqual(result["contexts"], len(full._rows))
+            with LMDBCountTable(output, cache_size=2) as disk:
+                for context in full._rows:
+                    self.assertEqual(disk.lookup(context), full.lookup(context))
+                self.assertEqual(disk.lookup(b"absent"), ({}, 0))
+                with self.assertRaises(TypeError):
+                    disk.lookup(b"")[0][4] = 999
+                with self.assertRaises(TypeError):
+                    CountModel(config, disk).state_dict()
+                for window in (None, 1, 5):
+                    current = CountConfig(max_context=3, window=window)
+                    memory_model, disk_model = CountModel(current, full), CountModel(current, disk)
+                    for token_id in [1, 8, 9, 4, 259, 2, 4, 5, 7, 4, 5]:
+                        np.testing.assert_array_equal(memory_model.probabilities(), disk_model.probabilities())
+                        self.assertEqual(memory_model.features(), disk_model.features())
+                        memory_model.observe(token_id)
+                        disk_model.observe(token_id)
+                    rule = BoundaryRule((-2, 0.1, 0.1, 1, 0.1), 3, 0.375)
+                    self.assertEqual(rollout(documents[1], config=current, rule=rule, background=full),
+                                     rollout(documents[1], config=current, rule=rule, background=disk))
+                self.assertLessEqual(disk.cache_info().currsize, 2)
+            with self.assertRaises(ValueError):
+                disk.lookup(b"")
+            with self.assertRaises(FileExistsError):
+                build_lmdb_background(report, output, map_size_bytes=4 * 1024 ** 2)
+            payload["table_sha256"] = hashlib.sha256(json.dumps(blocks, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            report.write_text(json.dumps(payload))
+            partial = root / "partial.lmdb"
+            partial_result = build_lmdb_background(report, partial, map_size_bytes=4 * 1024 ** 2, block_limit=1)
+            self.assertEqual(partial_result["source_manifest_encoding"], "json_compact")
+            with self.assertRaises(ValueError):
+                LMDBCountTable(partial)
+            with LMDBCountTable(partial, allow_partial=True) as disk:
+                self.assertFalse(disk.metadata["complete_source"])
+            parent_report = root / "parent-background.json"
+            parent_payload = {**payload, "blocks": blocks[:1],
+                              "table_sha256": hashlib.sha256(json.dumps(blocks[:1], sort_keys=True).encode()).hexdigest()}
+            parent_report.write_text(json.dumps(parent_payload))
+            parent = root / "parent.lmdb"
+            parent_result = build_lmdb_background(parent_report, parent, map_size_bytes=4 * 1024 ** 2)
+            parent_hash = hashlib.sha256((parent / "data.mdb").read_bytes()).hexdigest()
+            seeded = root / "seeded.lmdb"
+            seeded_result = build_lmdb_background(report, seeded, map_size_bytes=8 * 1024 ** 2,
+                                                 parent_background=parent, parent_report=parent_report, batch_rows=2)
+            self.assertEqual(seeded_result["parent_reuse"]["completed_blocks"], 1)
+            self.assertEqual(seeded_result["input_rows"], result["input_rows"])
+            self.assertEqual(seeded_result["contexts"], result["contexts"])
+            self.assertEqual(seeded_result["completed_blocks"], 3)
+            self.assertTrue(seeded_result["complete_source"])
+            self.assertEqual(parent_hash, hashlib.sha256((parent / "data.mdb").read_bytes()).hexdigest())
+            with LMDBCountTable(seeded) as disk:
+                for context in full._rows:
+                    self.assertEqual(disk.lookup(context), full.lookup(context))
+                rule = BoundaryRule((-2, 0.1, 0.1, 1, 0.1), 3, 0.375)
+                self.assertEqual(rollout(documents[1], config=config, rule=rule, background=full),
+                                 rollout(documents[1], config=config, rule=rule, background=disk))
+            self.assertEqual(parent_result["status"], "complete")
+            interrupted_seed = root / "interrupted-seed.lmdb"
+
+            def stop_seed(details):
+                if details.get("stage") == "started":
+                    raise KeyboardInterrupt
+
+            with self.assertRaises(KeyboardInterrupt):
+                build_lmdb_background(report, interrupted_seed, map_size_bytes=8 * 1024 ** 2,
+                    parent_background=parent, parent_report=parent_report, progress=stop_seed)
+            resumed_seed = build_lmdb_background(report, interrupted_seed, map_size_bytes=8 * 1024 ** 2, resume=True)
+            self.assertEqual(resumed_seed["input_rows"], result["input_rows"])
+            with LMDBCountTable(interrupted_seed) as disk:
+                for context in full._rows:
+                    self.assertEqual(disk.lookup(context), full.lookup(context))
+            with self.assertRaises(RuntimeError):
+                build_lmdb_background(report, root / "parent-space-guard.lmdb", map_size_bytes=8 * 1024 ** 2,
+                    parent_background=parent, parent_report=parent_report, max_output_bytes=1)
+            with self.assertRaises(ValueError):
+                build_lmdb_background(report, root / "bad-parent.lmdb", map_size_bytes=8 * 1024 ** 2,
+                                      parent_background=parent, parent_report=report)
+            with self.assertRaises(ValueError):
+                build_lmdb_background(report, root / "partial-parent.lmdb", map_size_bytes=8 * 1024 ** 2,
+                                      parent_background=partial, parent_report=parent_report)
+            with self.assertRaises(ValueError):
+                build_lmdb_background(report, root / "missing-parent-report.lmdb", map_size_bytes=8 * 1024 ** 2,
+                                      parent_background=parent)
+            with self.assertRaises(ValueError):
+                build_lmdb_background(report, root / "seed-resume.lmdb", map_size_bytes=8 * 1024 ** 2,
+                                      parent_background=parent, parent_report=parent_report, resume=True)
+            reordered = root / "reordered.json"
+            reordered_blocks = list(reversed(blocks))
+            reordered.write_text(json.dumps({**payload, "blocks": reordered_blocks,
+                "table_sha256": hashlib.sha256(json.dumps(reordered_blocks, sort_keys=True).encode()).hexdigest()}))
+            with self.assertRaises(ValueError):
+                build_lmdb_background(reordered, root / "wrong-prefix.lmdb", map_size_bytes=8 * 1024 ** 2,
+                                      parent_background=parent, parent_report=parent_report)
+            guarded = root / "guarded.lmdb"
+            with self.assertRaises(RuntimeError):
+                build_lmdb_background(report, guarded, map_size_bytes=4 * 1024 ** 2, max_output_bytes=1, batch_rows=2)
+            with self.assertRaises(ValueError):
+                LMDBCountTable(guarded)
+            payload["blocks"][0]["table_sha256"] = "changed"
+            payload["table_sha256"] = hashlib.sha256(json.dumps(payload["blocks"], sort_keys=True).encode()).hexdigest()
+            report.write_text(json.dumps(payload))
+            failed = root / "failed.lmdb"
+            with self.assertRaises(ValueError):
+                build_lmdb_background(report, failed, map_size_bytes=4 * 1024 ** 2)
+            with self.assertRaises(ValueError):
+                LMDBCountTable(failed)
+
+    @unittest.skipUnless(importlib.util.find_spec("lmdb"), "LMDB is an opt-in background dependency")
+    def test_lmdb_resume_preserves_committed_rows_and_legacy_checkpoints(self):
+        from dataclasses import asdict
+        import hashlib
+        import lmdb
+        import os
+        import subprocess
+        import sys
+        from unittest.mock import patch
+        import numpy as np
+        from phdq_blt_cache import lmdb_counts
+        from phdq_blt_cache.count_patcher import BoundaryRule, CountConfig, CountModel, CountTable, rollout
+
+        config = CountConfig(max_context=3)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blocks = []
+            expected = CountTable(config)
+            for index, tokens in enumerate(([1, 4, 5, 4, 6, 2, 4, 5], [1, 8, 9, 4, 8, 2], [1, 4, 5, 8, 259])):
+                expected.add_document(tokens)
+                table = CountTable(config)
+                table.add_document(tokens)
+                path = root / f"block-{index}.jsonl"
+                table.freeze().save(path)
+                blocks.append({"table_path": str(path), "table_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                               "contexts": len(table._rows), "utf8_bytes": len(tokens)})
+            expected.freeze()
+            payload = {"storage": "document_blocks_v1", "blocks": blocks, "count_config": asdict(config),
+                       "table_sha256": hashlib.sha256(json.dumps(blocks, sort_keys=True).encode()).hexdigest()}
+            report = root / "background.json"
+            report.write_text(json.dumps(payload))
+            uninterrupted = root / "uninterrupted.lmdb"
+            lmdb_counts.build_lmdb_background(report, uninterrupted, map_size_bytes=4 * 1024 ** 2)
+            for mode in ("mid_commit", "uncommitted", "block_end", "legacy"):
+                output = root / f"{mode}.lmdb"
+
+                def stop(value):
+                    if value.get("stage") == "started":
+                        return
+                    if mode == "block_end" and value["completed_blocks"] == 0:
+                        return
+                    raise KeyboardInterrupt
+
+                original_decode = lmdb_counts._decode
+                calls = 0
+
+                def fail_decode(value):
+                    nonlocal calls
+                    calls += 1
+                    if calls == 5:
+                        raise RuntimeError("injected failure with uncommitted rows")
+                    return original_decode(value)
+
+                with self.assertRaises((KeyboardInterrupt, RuntimeError)):
+                    if mode == "uncommitted":
+                        with patch.object(lmdb_counts, "_decode", side_effect=fail_decode):
+                            lmdb_counts.build_lmdb_background(report, output, map_size_bytes=2 * 1024 ** 2, batch_rows=3)
+                    else:
+                        lmdb_counts.build_lmdb_background(report, output, map_size_bytes=2 * 1024 ** 2, batch_rows=3, progress=stop)
+                with lmdb.open(str(output)) as environment:
+                    with environment.begin(write=mode == "legacy") as transaction:
+                        saved = json.loads(transaction.get(lmdb_counts._METADATA))
+                        self.assertEqual(saved["status"], "building")
+                        if mode == "uncommitted":
+                            self.assertEqual(saved["input_rows"], 3)
+                        if mode == "legacy":
+                            saved.pop("completed_input_rows")
+                            saved.pop("current_block_rows")
+                            transaction.put(lmdb_counts._METADATA, json.dumps(saved).encode())
+                result = lmdb_counts.build_lmdb_background(report, output, map_size_bytes=8 * 1024 ** 2, batch_rows=2, resume=True)
+                self.assertEqual(result["resume_history"][-1]["input_rows"], saved["input_rows"])
+                self.assertEqual(result["input_rows"], sum(block["contexts"] for block in blocks))
+                self.assertEqual(result["map_size_bytes"], 8 * 1024 ** 2)
+                with lmdb_counts.LMDBCountTable(output) as disk:
+                    self.assertEqual(disk.metadata["contexts"], len(expected._rows))
+                    for context in expected._rows:
+                        self.assertEqual(disk.lookup(context), expected.lookup(context))
+                    memory_model, disk_model = CountModel(config, expected), CountModel(config, disk)
+                    for token_id in [1, 4, 8, 5, 2, 259, 7]:
+                        np.testing.assert_array_equal(memory_model.probabilities(), disk_model.probabilities())
+                        memory_model.observe(token_id)
+                        disk_model.observe(token_id)
+                    rule = BoundaryRule((-2, 0.1, 0.1, 1, 0.1), 3, 0.375)
+                    self.assertEqual(rollout([1, 4, 8, 5, 259], config=config, rule=rule, background=expected),
+                                     rollout([1, 4, 8, 5, 259], config=config, rule=rule, background=disk))
+                with self.assertRaises(ValueError):
+                    lmdb_counts.build_lmdb_background(report, output, map_size_bytes=8 * 1024 ** 2, resume=True)
+
+            interrupted = root / "cli-interrupted.lmdb"
+            code = """import signal
+import scripts.build_lmdb_background as cli
+original = cli.build_lmdb_background
+def wrapped(*args, **kwargs):
+    callback = kwargs['progress']
+    def pause(value):
+        callback(value)
+        if value.get('input_rows', 0) > 0:
+            signal.pause()
+    kwargs['progress'] = pause
+    kwargs['batch_rows'] = 3
+    return original(*args, **kwargs)
+cli.build_lmdb_background = wrapped
+cli.main()
+"""
+            arguments = ["--report", str(report), "--output", str(interrupted),
+                         "--min-free-gib", "0", "--max-output-gib", "1"]
+            process = subprocess.Popen([sys.executable, "-c", code, *arguments, "--map-size-gib", "1",
+                                        "--memory-limit-gib", "2"], stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, text=True, env={**os.environ, "OPENBLAS_NUM_THREADS": "8"})
+            try:
+                while True:
+                    line = process.stdout.readline()
+                    self.assertTrue(line, "CLI exited before a committed checkpoint")
+                    if json.loads(line).get("input_rows", 0) >= 3:
+                        break
+                process.terminate()
+                stdout, stderr = process.communicate(timeout=30)
+                self.assertEqual(process.returncode, 130, stderr)
+                self.assertIn('"status": "interrupted"', stdout)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.communicate(timeout=30)
+            with lmdb.open(str(interrupted)) as environment:
+                with environment.begin() as transaction:
+                    saved = json.loads(transaction.get(lmdb_counts._METADATA))
+                    self.assertEqual(saved["input_rows"], 3)
+            bad_report = root / "different-report.json"
+            bad_report.write_text(report.read_text() + "\n")
+            with self.assertRaises(ValueError):
+                lmdb_counts.build_lmdb_background(bad_report, interrupted, map_size_bytes=8 * 1024 ** 2, resume=True)
+            bad = dict(saved, input_rows=saved["input_rows"] + 1)
+            with self.assertRaises(ValueError):
+                lmdb_counts._resume_position(bad, saved, blocks)
+            with self.assertRaises(ValueError):
+                lmdb_counts.build_lmdb_background(report, interrupted, map_size_bytes=8 * 1024 ** 2,
+                                                  block_limit=1, resume=True)
+            with self.assertRaises(RuntimeError):
+                lmdb_counts.build_lmdb_background(report, root / "rss-guard.lmdb",
+                                                  map_size_bytes=4 * 1024 ** 2, max_rss_bytes=1)
+            resumed = subprocess.run([sys.executable, "-m", "scripts.build_lmdb_background", *arguments,
+                                      "--resume", "--map-size-gib", "128", "--memory-limit-gib", "160"],
+                                     capture_output=True, text=True, timeout=30,
+                                     env={**os.environ, "OPENBLAS_NUM_THREADS": "8"})
+            self.assertEqual(resumed.returncode, 0, resumed.stderr)
+            cli_result = json.loads(interrupted.with_suffix(".report.json").read_text())
+            self.assertEqual(cli_result["map_size_bytes"], 128 * 1024 ** 3)
+            self.assertEqual(cli_result["address_space_limit_bytes"], 160 * 1024 ** 3)
+            with lmdb_counts.LMDBCountTable(interrupted) as disk:
+                for context in expected._rows:
+                    self.assertEqual(disk.lookup(context), expected.lookup(context))
+
+            abrupt = root / "legacy-sigterm.lmdb"
+            abrupt_code = """import json
+import signal
+import sys
+from phdq_blt_cache import lmdb_counts
+original = lmdb_counts._decode
+calls = 0
+def pause_uncommitted(value):
+    global calls
+    calls += 1
+    if calls == 5:
+        print(json.dumps({'stage': 'uncommitted'}), flush=True)
+        signal.pause()
+    return original(value)
+lmdb_counts._decode = pause_uncommitted
+lmdb_counts.build_lmdb_background(sys.argv[1], sys.argv[2], map_size_bytes=2*1024**2, batch_rows=3)
+"""
+            process = subprocess.Popen([sys.executable, "-c", abrupt_code, str(report), str(abrupt)],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                self.assertEqual(json.loads(process.stdout.readline())["stage"], "uncommitted")
+                process.terminate()
+                _, stderr = process.communicate(timeout=30)
+                self.assertEqual(process.returncode, -15, stderr)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.communicate(timeout=30)
+            with lmdb.open(str(abrupt)) as environment:
+                with environment.begin(write=True) as transaction:
+                    legacy = json.loads(transaction.get(lmdb_counts._METADATA))
+                    self.assertEqual(legacy["input_rows"], 3)
+                    legacy.pop("completed_input_rows")
+                    legacy.pop("current_block_rows")
+                    transaction.put(lmdb_counts._METADATA, json.dumps(legacy).encode())
+            lmdb_counts.build_lmdb_background(report, abrupt, map_size_bytes=8 * 1024 ** 2, resume=True)
+            with lmdb_counts.LMDBCountTable(abrupt) as disk:
+                for context in expected._rows:
+                    self.assertEqual(disk.lookup(context), expected.lookup(context))
+
     def test_online_counts_match_full_tuple_window_oracle(self):
         from phdq_blt_cache.count_patcher import CountConfig, CountModel
 

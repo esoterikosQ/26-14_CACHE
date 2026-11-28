@@ -1,0 +1,22 @@
+{
+  "run_id": "en-patcher-bg10gb-diskcpp-20261024-02",
+  "baseline_config": "experiments/english_patcher_pilot.json",
+  "sources": "evidence/english_dataset_sources_20261019.json",
+  "background_utf8_bytes": 10000000000,
+  "parent_background_run_directory": "runs/en-patcher-bg5gb-20261020-01",
+  "comparison_run_directory": "runs/en-patcher-bg5gb-20261020-01",
+  "background_block_utf8_bytes": 25000000,
+  "compress_background_blocks": true,
+  "verify_projection": true,
+  "preparation_backend": "sqlite_cpp_v1",
+  "sampling_seed": 20261023,
+  "openblas_num_threads": 8,
+  "wall_clock_limit": null,
+  "tmux_session": "blt-bg10gb-diskcpp-20261024-02",
+  "comparison": "F1 continuation; identical labels, rules, sampling and counts; exact parent validation unchanged; not F0.5",
+  "numerical_reproducibility": "Launch with OPENBLAS_NUM_THREADS=8 before importing NumPy; inherited by every stage. Same replay arrays reproduce saved AP exactly with 8 threads; default/24 threads change AP by 1 ULP. No tolerance relaxation.",
+  "sampling": "Same pinned shards, seed 20261023, doubled remaining-byte candidate quota and protected parent/splits; identical approximate dedup and length-stratified order",
+  "scratch": "Keep failed artifacts; remove only this run's disposable SQLite on successful preparation",
+  "limits": "Unchanged 48GiB address space, minimum 100GiB free disk and maximum 100GiB new artifacts; no time cap or automatic retry",
+  "heldout": "Raw heldout text only for duplicate exclusion; no heldout labels, scores or new teacher inference"
+}

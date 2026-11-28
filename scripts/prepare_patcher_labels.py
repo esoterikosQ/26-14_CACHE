@@ -56,18 +56,21 @@ def main():
     config = json.loads(args.config.read_text())
     root = Path(config["work_root"])
     run = root / config["run_directory"]
-    dataset = root / config["dataset_directory"] / config["run_id"]
+    dataset = root / config["dataset_directory"] / config.get("dataset_id", config["run_id"])
     manifest = json.loads((dataset / "manifest.json").read_text())
     background = json.loads((run / "background_build.json").read_text())
     if background["status"] != "built":
         raise ValueError("A successful bounded background build is required")
     budgets = config["budgets"]
     baseline = config["baseline"]
+    teacher = baseline.get("teacher_patcher")
     contract = {
         "protocol": PROTOCOL, "config_sha256": file_hash(args.config),
         "conversion_sha256": file_hash(baseline["conversion_report"]),
         "owner_source_sha256": {str(path.relative_to(args.blt_project)): file_hash(path) for path in sorted((args.blt_project / "blt_hf").rglob("*.py"))},
     }
+    if teacher is not None:
+        contract["teacher_patcher"] = {"checkpoint_sha256": teacher["sha256"], "threshold": teacher["threshold"]}
     contract_hash = hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest()
     labels_root = run / "labels"
     labels_root.mkdir(exist_ok=True)
@@ -88,6 +91,13 @@ def main():
             torch.cuda.set_device(budgets["gpu_index"])
             model = load_model(Path(baseline["model_checkpoint"]), Path(baseline["conversion_report"]), attention_mode="osc", backend="eager", device="cpu")
             model.eval().requires_grad_(False)
+            if teacher is not None:
+                from blt_hf.patcher_compare import checkpoint_patcher
+                patcher, digest, _ = checkpoint_patcher(model.model.patcher, Path(teacher["checkpoint"]))
+                if digest != teacher["sha256"]:
+                    raise ValueError("Teacher patcher checkpoint differs from the configured sha256")
+                model.model.patcher = patcher.requires_grad_(False)
+                model.config.patching_threshold = float(teacher["threshold"])
             model.model.patcher.to("cuda")
             tokenizer = AutoTokenizer.from_pretrained(baseline["model_checkpoint"], local_files_only=True)
             if (model.config.vocab_size, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id) != (260, 1, 2, 3):

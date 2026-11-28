@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "run_id": "ko-patcher-t14-20261127-01",
+  "dataset_id": "ko-count-sample-20261127-01",
+  "stage": "T14",
+  "host": "itcerdo",
+  "work_root": "/home/itcmaster/projects/blt-cache",
+  "run_directory": "runs/ko-patcher-t14-20261127-01",
+  "dataset_directory": "datasets",
+  "seed": 20261127,
+  "data": {
+    "policy": "Neuron blt_hf.count_sample from the CPT split manifest of the run1 teacher: background and label train from CPT train (disjoint lines), validation from CPT validation after its first 20000 documents, test from the held-out test",
+    "user_selection_date": "2026-11-27",
+    "background_utf8_bytes": 50000000000,
+    "label_train_utf8_bytes": 4000000,
+    "label_validation_utf8_bytes": 500000,
+    "test_utf8_bytes": 1500000,
+    "utf8_length_filter": [256, 65536]
+  },
+  "screened_configurations": [{"max_context": 8, "window": null}],
+  "count_configuration_source": "English T05/T07 setting reused without a Korean resource screen",
+  "gates": {
+    "bootstrap_replicates": 2000,
+    "policy": "No pass/fail criteria; report measured values"
+  },
+  "budgets": {
+    "gpu_index": 0,
+    "gpu_count": 1,
+    "cpu_threads": 8,
+    "peak_host_ram_gib": 48,
+    "peak_gpu_memory_gib": 28,
+    "maximum_new_artifact_storage_gib": 250,
+    "minimum_free_disk_gib": 30,
+    "maximum_threshold_trials_per_configuration": 33,
+    "maximum_optimizer_iterations": 500,
+    "maximum_initial_build_and_label_seconds": 43200
+  },
+  "baseline": {
+    "dtype": "bfloat16",
+    "batch_size": 1,
+    "beam_size": 1,
+    "cache_enabled": false,
+    "model_checkpoint": "/home/itcmaster/projects/phdq3/artifacts/converted/blt-1b-hf-own",
+    "conversion_report": "/home/itcmaster/projects/phdq3/blt_hf_checks/manifests/conversion_B_20260915.json",
+    "teacher_patcher": {
+      "checkpoint": "/home/itcmaster/projects/blt-cache/artifacts/korean_entropy/ko-entropy-h200-20261107-01/final-00137500.pt",
+      "sha256": "7505624fb0a49eae0be22c2a97600975c0d7c95055939c34e4824cffa89fe0d9",
+      "threshold": 1.140625
+    },
+    "body": "Patcher-level stages only; the BLT comparison waits for the C final body"
+  }
+}
