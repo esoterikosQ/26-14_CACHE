@@ -1,0 +1,381 @@
+{
+  "status": "passed",
+  "scope": "Three synthetic inputs, no cache reuse, batch1 BF16 OSC eager",
+  "limitations": "Not heldout quality, cold-cache timing, full parity, or a speedup claim. Fixed teacher-forced bytes include BOS only as context. Generation timing includes CPU lookup and tensor transfers; model loading is excluded.",
+  "model_checkpoint": "/home/itcmaster/projects/phdq3/artifacts/converted/blt-1b-hf-own",
+  "conversion_report_sha256": "00805ed1d402de791c531df2d124d47333a4199b8853516f4b01c06c85cdd441",
+  "fit_report_sha256": "42d998aa4f98b6465c6324cbfbdc54c4cf9a807691867bc375048ed7d28751e1",
+  "rule": {
+    "coefficients": [
+      -4.396439611468035,
+      0.0,
+      0.0,
+      2.4930392588197363,
+      0.22337717045987543
+    ],
+    "mean_patch_length": 4.5313422072519485,
+    "threshold": 0.375
+  },
+  "device": "NVIDIA GeForce RTX 5090",
+  "torch": "2.11.0+cu128",
+  "cuda": "12.8",
+  "code_sha256": {
+    "/home/itcmaster/projects/blt-cache/source/scripts/smoke_blt_count_patcher.py": "295fae1982943c46be86366f20c3267e90bdc7f7d0c7fd7ae4e8e93f5466998f",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/blt_patcher.py": "dc3a9328a0a5bd6c740ab34f4671a6a008ea627e0186ed3f1d05a3ca6f76f355",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/lmdb_counts.py": "0015276d5f20277b8c32f74a1a6d4b4faef545c681e7f16da1df8aa6bc94637a",
+    "/home/itcmaster/projects/blt-cache/source/src/phdq_blt_cache/count_patcher.py": "2518c5593f858d86a7db8b1a4824583e71a2ca89ad0a9a152451346b525e6d6d",
+    "/home/itcmaster/projects/phdq3/blt_hf/patched/modeling_blt.py": "61719aa2f0050ad4eb48eee9fbc941bd0de6f7110ccd528359cf096848302746"
+  },
+  "cases": [
+    {
+      "input_ids": [
+        1,
+        88,
+        108,
+        105,
+        36,
+        103,
+        101,
+        120,
+        36,
+        119,
+        101,
+        120,
+        36,
+        115,
+        114,
+        36,
+        120,
+        108,
+        105,
+        36,
+        113,
+        101,
+        120,
+        50
+      ],
+      "utf8_bytes": 23,
+      "modes": {
+        "original": {
+          "bpb": 1.233249151214733,
+          "forward_seconds": 0.023274716921150684,
+          "generation_seconds": 0.2342900251969695,
+          "generated_ids": [
+            14,
+            14,
+            88,
+            108,
+            105,
+            36,
+            103,
+            101,
+            120,
+            36,
+            119,
+            101,
+            120,
+            36,
+            115,
+            114
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276822528,
+          "text": "\n\nThe cat sat on",
+          "valid_utf8": true
+        },
+        "count_lmdb": {
+          "bpb": 1.2683692123994745,
+          "forward_seconds": 0.016690521966665983,
+          "patch_lengths": [
+            [
+              1,
+              4,
+              1,
+              1,
+              1,
+              1,
+              1,
+              3,
+              3,
+              4,
+              2,
+              3
+            ]
+          ],
+          "generation_seconds": 0.17298005614429712,
+          "generated_ids": [
+            14,
+            14,
+            88,
+            108,
+            105,
+            36,
+            103,
+            101,
+            120,
+            36,
+            119,
+            101,
+            120,
+            36,
+            115,
+            114
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276848640,
+          "text": "\n\nThe cat sat on",
+          "valid_utf8": true
+        }
+      }
+    },
+    {
+      "input_ids": [
+        1,
+        101,
+        102,
+        103,
+        92,
+        101,
+        102,
+        103,
+        36,
+        101,
+        102,
+        103,
+        92,
+        101,
+        102,
+        103,
+        50
+      ],
+      "utf8_bytes": 16,
+      "modes": {
+        "original": {
+          "bpb": 3.455140054966369,
+          "forward_seconds": 0.014035399071872234,
+          "generation_seconds": 0.21589618921279907,
+          "generated_ids": [
+            36,
+            69,
+            102,
+            103,
+            92,
+            101,
+            102,
+            103,
+            50,
+            36,
+            69,
+            102,
+            103,
+            92,
+            101,
+            102
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276585984,
+          "text": " AbcXabc. AbcXab",
+          "valid_utf8": true
+        },
+        "count_lmdb": {
+          "bpb": 3.4359980419600364,
+          "forward_seconds": 0.012199142947793007,
+          "patch_lengths": [
+            [
+              1,
+              1,
+              2,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ]
+          ],
+          "generation_seconds": 0.1705941460095346,
+          "generated_ids": [
+            36,
+            88,
+            108,
+            105,
+            36,
+            101,
+            102,
+            103,
+            92,
+            101,
+            102,
+            103,
+            36,
+            109,
+            119,
+            36
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276844544,
+          "text": " The abcXabc is ",
+          "valid_utf8": true
+        }
+      }
+    },
+    {
+      "input_ids": [
+        1,
+        73,
+        114,
+        107,
+        112,
+        109,
+        119,
+        108,
+        36,
+        123,
+        109,
+        120,
+        108,
+        36,
+        103,
+        101,
+        106,
+        199,
+        173,
+        50
+      ],
+      "utf8_bytes": 19,
+      "modes": {
+        "original": {
+          "bpb": 2.5647819158486387,
+          "forward_seconds": 0.013939508236944675,
+          "generation_seconds": 0.22348135383799672,
+          "generated_ids": [
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276642816,
+          "text": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+          "valid_utf8": true
+        },
+        "count_lmdb": {
+          "bpb": 2.572485018780784,
+          "forward_seconds": 0.015670983120799065,
+          "patch_lengths": [
+            [
+              1,
+              1,
+              1,
+              6,
+              1,
+              4,
+              1,
+              1,
+              5
+            ]
+          ],
+          "generation_seconds": 0.17807586025446653,
+          "generated_ids": [
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14,
+            14
+          ],
+          "eos": false,
+          "max_new_tokens": 16,
+          "peak_cuda_allocated_bytes": 9276624896,
+          "text": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+          "valid_utf8": true
+        }
+      }
+    }
+  ],
+  "background": {
+    "backend_code_sha256": "0015276d5f20277b8c32f74a1a6d4b4faef545c681e7f16da1df8aa6bc94637a",
+    "complete_source": true,
+    "completed_blocks": 400,
+    "completed_input_rows": 5146141302,
+    "config": {
+      "alpha": 1.0,
+      "eos_id": 2,
+      "kappa": 1.0,
+      "max_context": 8,
+      "online_weight": 1.0,
+      "pad_id": 3,
+      "suffix_decay": 1.0,
+      "vocab_size": 260,
+      "window": null
+    },
+    "contexts": 579634386,
+    "current_block_rows": 0,
+    "elapsed_seconds": 125247.56030691974,
+    "format": "phdq_count_lmdb_v1",
+    "input_rows": 5146141302,
+    "limits": {
+      "max_output_bytes": 107374182400,
+      "max_rss_bytes": 51539607552,
+      "min_free_bytes": 107374182400
+    },
+    "lmdb_version": "2.3.0",
+    "map_size_bytes": 137438953472,
+    "resume_history": [
+      {
+        "backend_code_sha256": "0015276d5f20277b8c32f74a1a6d4b4faef545c681e7f16da1df8aa6bc94637a",
+        "completed_blocks": 54,
+        "current_block_rows": 158686,
+        "input_rows": 681170000,
+        "map_size_bytes": 137438953472,
+        "previous_map_size_bytes": null,
+        "previous_session_elapsed_seconds": null,
+        "started_utc": "2026-10-25T01:50:51.948874+00:00"
+      }
+    ],
+    "selected_blocks": 400,
+    "session_elapsed_seconds": 125247.50094651477,
+    "source_blocks": 400,
+    "source_manifest_encoding": "json_compact",
+    "source_manifest_sha256": "ba0c138104e60ab960effc2b4aef5896cb8b8ddc746992f0ee6ca3d54baaff3a",
+    "source_report_sha256": "d133f2e4025070fa8e175b8f1120b8e58acb5ab6c708a7cb2b869d921f437e1a",
+    "source_utf8_bytes": 10000002264,
+    "status": "complete"
+  },
+  "peak_host_rss_bytes": 10150088704
+}

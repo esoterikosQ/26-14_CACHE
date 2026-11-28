@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "run_id": "en-patcher-bg20gb-nested-20261029-02",
+  "host": "itcerdo",
+  "observation_started_at": "2026-11-01T08:30:52Z",
+  "finished_at_from_progress": "2026-10-30T09:15:47+00:00",
+  "status": "completed",
+  "fit_status": "validation_gate_failed",
+  "remote_run_directory": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg20gb-nested-20261029-02",
+  "comparison_parent": "en-patcher-bg10gb-diskcpp-20261024-02",
+  "scope": "20GB nested background counts; unchanged training labels; F1 continuation, not neural CPT",
+  "background_documents": 4891146,
+  "background_utf8_bytes": 20000001834,
+  "count_table_bytes_including_parent": 86421001573,
+  "training_positions": 4041644,
+  "validation_documents": 111,
+  "baseline": {
+    "f1": 0.7853676082457853,
+    "precision": 0.7681686511381394,
+    "recall": 0.8033543577981651,
+    "entropy_mae": 0.4511278819663696,
+    "entropy_rmse": 0.6659295808824975,
+    "entropy_spearman": 0.8367787766474046,
+    "log_loss": 0.23707470571073025,
+    "auprc_average_precision": 0.8458702744572413,
+    "candidate_patch_count": 110013,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 4.220864806886459,
+    "threshold": 0.375
+  },
+  "expanded": {
+    "f1": 0.7878359727712929,
+    "precision": 0.7717153201044865,
+    "recall": 0.804644495412844,
+    "entropy_mae": 0.44609577717204196,
+    "entropy_rmse": 0.659713896668492,
+    "entropy_spearman": 0.838882093174924,
+    "log_loss": 0.2354532480125546,
+    "auprc_average_precision": 0.8488831457938283,
+    "candidate_patch_count": 109685,
+    "teacher_patch_count": 105220,
+    "candidate_mean_patch_length": 4.23348680311802,
+    "threshold": 0.375,
+    "tp": 84198,
+    "fp": 24907,
+    "fn": 20442,
+    "document_bootstrap_f1_95ci": [0.7802906215191356, 0.7938436490169838]
+  },
+  "comparison": {
+    "f1_difference": 0.0024683645255075826,
+    "paired_document_bootstrap_difference_95ci": [0.0016393433386237472, 0.003274021716170755],
+    "baseline_replay_matches": true,
+    "quality_gate_f1_min": 0.9,
+    "quality_gate_passed": false
+  },
+  "fit": {
+    "coefficients": [-4.3790110549392764, 0.0, 0.0, 2.5064261082324366, 0.23145851003304077],
+    "rho": 0.001,
+    "loss": 0.2467236606156265,
+    "iterations": 14,
+    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+    "scaled_projected_gradient_max": 4.381593825127913e-09,
+    "threshold_trials": 15,
+    "fit_report_config_run_id": "en-patcher-20261019-01"
+  },
+  "timing_seconds": {
+    "prepare": 20712.164868460968,
+    "build": 48091.127717707306,
+    "fit_stage": 14753.965004690923,
+    "background_loading_within_fit": 13545.425359787885,
+    "feature_generation_within_fit": 397.8140834257938,
+    "coefficient_optimization_within_fit": 1.348871876951307,
+    "total_pipeline": 88913.995334581
+  },
+  "peak_host_rss_bytes": {
+    "prepare": 526000128,
+    "build": 5485826048,
+    "fit": 4751736832
+  },
+  "verified_report_sha256": {
+    "run_report.json": "d609d7bfca7fe8f28af5ba6168ec71ff0859dc6729fee03a8aa2aa6c8357ab5d",
+    "input_plan": "8b0ed29e2c04bb349ce1382c5e7c444e6ce78d13b8d4e8d0af7ec4263ccf9319",
+    "baseline_config": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+    "data_preparation.json": "9a932905b597cd843f52bab1cb6ce4a84c04fb8e4493148d69e6db9c46f81b9d",
+    "background_build.json": "f4098e2f2c098a9d5fdabed1172ecfe011b107c1230f2131fcadc9f0b9171e06",
+    "fit/report.json": "d3e6da68eb5ae667b287c176cd6e77ea30487de96fc68060f9b2314a51e2b48d",
+    "comparison.json": "873d0bf57032cd6197fb2c3138a898ad80dd07742e79830ec677c0fb1feb5feb",
+    "parent_background_build.json": "d133f2e4025070fa8e175b8f1120b8e58acb5ab6c708a7cb2b869d921f437e1a",
+    "parent_fit/report.json": "42d998aa4f98b6465c6324cbfbdc54c4cf9a807691867bc375048ed7d28751e1"
+  },
+  "verification": {
+    "original_plan_hash_and_snapshot_json_values_match": true,
+    "stage_and_parent_report_hashes_match": true,
+    "comparison_report_references_match": true,
+    "full_corpus_and_count_blocks_rehashed": false
+  },
+  "limitations": [
+    "Same validation reused for threshold selection; the paired interval is descriptive, not independent test evidence.",
+    "Sampling composition may change with volume, so this is not an isolated data-size causal estimate.",
+    "No20GB ablations, downstream full-BLT BPB/speed or heldout evaluation measured.",
+    "Report hashes and identities verified; raw corpus and every count block were not rehashed in this inspection.",
+    "Fit report carries the baseline config run_id; the outer pipeline ID and pinned input/report hashes identify this expansion."
+  ],
+  "candidate_adopted": false
+}

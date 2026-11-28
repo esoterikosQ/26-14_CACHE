@@ -1,0 +1,20 @@
+{
+  "run_id": "en-patcher-bg10gb-diskcpp-20261024-01",
+  "status": "failed",
+  "plan_sha256": "6e6b79a6e262bdbf0ebdc94a79eff11d8c8b516084dad36407dabcc83b674b16",
+  "baseline_config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "stages": [],
+  "code_sha256": {
+    "scripts/run_background_expansion.py": "e9eca43dd8c8c9788f2bb8345c1a0ead4772e7de8b90a976d7480ccf8d312c61",
+    "scripts/fit_count_patcher.py": "07487f086a8ebba5f7a440fcf48645bfe05ce53c6a9753e628b816dc7f262618",
+    "src/phdq_blt_cache/count_patcher.py": "258c258d7d0d8167662558a36dae6cd0b09b6d66c3693b12f4f5de78cab70687",
+    "scripts/prepare_disk_background.py": "49a654af5767e3ae07a1b74d01cc08641681b7b9e4d63c2ff0fd7d9bdb5b59f1",
+    "scripts/disk_dedup.py": "4a21c3e819f7ac79c63ca7ca9819fda8cc3f91e95249e51ae5322160cb220fe3",
+    "scripts/native_minhash.py": "ca3dc1e4ee1461cccd6359c98f1c2f29e3f3c1bbf335d865f09124691cb5c260",
+    "scripts/native/minhash.cpp": "fe21fb3b468432bd54a94a7ea40e97137aeef215d241190cc1f5de88a0683ad6",
+    "scripts/prepare_english_data.py": "4474952dbb42ebd1feba4f85817f25e1be4f146a5747f38ea8d700e0ef03832d"
+  },
+  "error_type": "CalledProcessError",
+  "error": "Command '['/home/itcmaster/projects/blt-cache/.venv/bin/python', '-m', 'scripts.run_background_expansion', '--plan', '/home/itcmaster/projects/blt-cache/source/experiments/english_background_10gb_disk_cpp.json', '--stage', 'verify']' returned non-zero exit status 1.",
+  "elapsed_seconds": 2644.7389535498805
+}

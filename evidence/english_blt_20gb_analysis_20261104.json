@@ -1,0 +1,95 @@
+{
+  "analysis_date": "2026-11-04",
+  "run_id": "en-blt20gb-compare-20261101-01",
+  "finished_at_utc": "2026-11-03T11:41:38.639289+00:00",
+  "scope": "Frozen 20GB Python LMDB count versus OSC neural; historical 10GB is a separate comparison, not pooled",
+  "artifact_directory": "/home/itcmaster/projects/blt-cache/runs/en-blt20gb-compare-20261101-01",
+  "verified_artifact_sha256": {
+    "quality.json": "5092a5a1bf8d6250dfac0f028e82d8577b72c1dfcaf275ec5615980b3118bf7e",
+    "generation.json": "6d061e2dbbc8a3fd4a55ddb55a4359e99b290a13f82f75ef675ceb0158d90a4a",
+    "timing.json": "f20e3835e23008bddc6813cdf5c3e70e45a8f759638e220fd535a68fc3ce58ab"
+  },
+  "runtime": {"gpu": "NVIDIA GeForce RTX 5090", "torch": "2.11.0+cu128", "transformers": "5.16.1", "dtype": "bfloat16", "attention": "osc", "backend": "eager", "batch": 1, "beam": 1, "cache": false, "threads": 8},
+  "background": {"utf8_bytes": 20000001834, "completed_blocks": 800, "parent_blocks": 400, "contexts": 875504902, "index_elapsed_seconds": 159567.94940176234},
+  "quality": {
+    "documents": 333,
+    "chunks": 928,
+    "scored_bytes": 1497578,
+    "test": {"documents": 113, "scored_bytes": 495516, "neural_bpb": 0.77090475218642, "count_bpb": 0.7736564936589664, "delta_bpb": 0.00275174147254638},
+    "wikipedia_test": {"documents": 220, "scored_bytes": 1002062, "neural_bpb": 0.8303014876722836, "count_bpb": 0.8323058014314053, "delta_bpb": 0.0020043137591216637},
+    "combined": {"neural_bpb": 0.810648399298247, "count_bpb": 0.8129000206372378, "delta_bpb": 0.0022516213389908667, "paired_document_bootstrap95": [0.0014776165842499416, 0.0031102422356310694], "bootstrap_replicates": 2000, "maximum_bpb_increase": 0.01, "bpb_criterion_passed": true},
+    "boundaries": {"tp": 275761, "fp": 125193, "fn": 63137, "positions": 1497578, "precision": 0.6877621871835672, "recall": 0.8136991071059729, "f1": 0.7454490898179635, "f0_5": 0.7097313346174475}
+  },
+  "generation": {
+    "prompts": 9,
+    "seeds": [42, 20261027],
+    "pairs": 18,
+    "neural": {"runs": 18, "generated_ids": 23554, "generated_bytes": 23543, "eos": 11, "valid_utf8": 18, "total_seconds": 754.4062840626575, "matches_recorded_sampling": 18},
+    "count": {"runs": 18, "generated_ids": 26220, "generated_bytes": 26211, "eos": 9, "valid_utf8": 18, "total_seconds": 696.3994387765415},
+    "neural_count_identical_ids": 0,
+    "neural_count_identical_text": 0,
+    "peak_host_rss_bytes": 10117898240
+  },
+  "timing": {
+    "cases": 8,
+    "input_lengths": [256, 512, 1024, 2048],
+    "warmup": 3,
+    "repeats": 10,
+    "aggregation": "Sum of each case's 10-repeat mean seconds across 8 inputs",
+    "model_prefill": {"neural_seconds": 0.24873058786615732, "count_seconds": 0.9956672342494131},
+    "patcher_prefill": {"neural_seconds": 0.07346042469143868, "count_seconds": 0.8088548284955323},
+    "patcher_incremental32": {"neural_seconds": 2.332086761575192, "count_seconds": 0.0747043889015913},
+    "model_incremental32_measured": false,
+    "model_total32_measured": false
+  },
+  "followup_total32": {
+    "run_id": "en-blt20gb-total-20261104-01",
+    "status": "completed",
+    "started_at_utc": "2026-11-04T02:30:00.126280+00:00",
+    "finished_at_utc": "2026-11-04T02:34:02.367616+00:00",
+    "artifact": "/home/itcmaster/projects/blt-cache/runs/en-blt20gb-total-20261104-01/total.json",
+    "artifact_sha256": "49c55639ac264d2fc2313335d6da325ba30dbc6ba63738c4178c52529634db07",
+    "timing_reference_sha256": "f20e3835e23008bddc6813cdf5c3e70e45a8f759638e220fd535a68fc3ce58ab",
+    "conda_environment": "phdq_blt_hf",
+    "approved_dependency_change": "Installed only lmdb==2.3.0 with --no-deps; torch/transformers/numpy versions unchanged",
+    "preflight_verified": ["model weights", "fit report", "background report", "timing reference", "frozen replay source"],
+    "measurement": "One initial full-model forward followed by 32 same-byte teacher-forced full-model forwards; model cache disabled, count prefix reuse enabled",
+    "aggregation": "Sum of each case's 10-repeat mean seconds across the exact 8 reference inputs; GPU synchronization at initial/incremental boundary",
+    "cases": 8,
+    "steps": 32,
+    "warmup": 3,
+    "repeats": 10,
+    "model_initial": {"neural_seconds": 0.24340699864551424, "count_seconds": 0.9803054124582559},
+    "model_incremental32": {"neural_seconds": 7.8343434590846295, "count_seconds": 6.120595667604357},
+    "model_total32": {"neural_seconds": 8.077750457730144, "count_seconds": 7.100901080062613},
+    "per_case_incremental": [
+      {"split": "test", "input_length": 256, "neural_seconds": 0.48359238845296204, "count_seconds": 0.38362540109083054},
+      {"split": "test", "input_length": 512, "neural_seconds": 0.609527311148122, "count_seconds": 0.484221540344879},
+      {"split": "test", "input_length": 1024, "neural_seconds": 0.768167126737535, "count_seconds": 0.6010760204866529},
+      {"split": "test", "input_length": 2048, "neural_seconds": 1.8751984629314393, "count_seconds": 1.2287089587189257},
+      {"split": "wikipedia_test", "input_length": 256, "neural_seconds": 0.4890970922540873, "count_seconds": 0.39040940068662167},
+      {"split": "wikipedia_test", "input_length": 512, "neural_seconds": 0.6190772823989391, "count_seconds": 0.5603411655873061},
+      {"split": "wikipedia_test", "input_length": 1024, "neural_seconds": 0.8411172437015921, "count_seconds": 0.6768282233737409},
+      {"split": "wikipedia_test", "input_length": 2048, "neural_seconds": 2.148566551459953, "count_seconds": 1.7953849573154002}
+    ],
+    "controls": {"reference_input_ids_match": true, "count_warm_fresh_boundaries_equal": true, "count_warm_fresh_logits_equal": true, "repeats_ok": true, "maximum_paired_component_residual_seconds": 0},
+    "peak_host_rss_bytes": 10118696960,
+    "limits": {"address_space_bytes": 171798691840, "observed_free_disk_gib": 142},
+    "limitations": ["Same-input replay timing, not free-sampling throughput", "Count warm/fresh equality does not imply equality with neural patcher outputs", "No 20GB C++ replay or automatic candidate adoption"]
+  },
+  "historical_10gb": {
+    "quality_evidence": "evidence/english_blt_cpp_quality_20261029.json",
+    "generation_evidence": "evidence/english_blt_patcher_generation_20261028.json",
+    "timing_evidence": "evidence/english_blt_cpp_timing_20261029.json",
+    "note": "10GB Python and C++ quality parity was measured separately; 20GB C++ replay was not measured"
+  },
+  "limitations": [
+    "BPB criterion pass does not establish equal quality: measured neural-count delta and its interval are positive",
+    "20GB changes both background counts and fitted coefficients; do not attribute the historical difference solely to bytes",
+    "Boundary F1 over all 333 scored documents differs from the fit-validation 111-document F1",
+    "Free-generation bytes/seconds are observed throughput; differing output paths and lengths prevent equal-work speedup claims",
+    "Original timing measured only patcher incremental work; separate followup_total32 now measures full-model initial/incremental/total replay",
+    "Checkpoint path and report provenance inspected; model weights and all raw input files were not rehashed",
+    "Single model/GPU/batch/beam/configuration; no automatic candidate adoption or GEC/task-quality claim"
+  ]
+}

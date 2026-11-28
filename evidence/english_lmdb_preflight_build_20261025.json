@@ -1,0 +1,30 @@
+{
+  "format": "phdq_count_lmdb_v1",
+  "status": "complete",
+  "config": {
+    "max_context": 8,
+    "window": null,
+    "alpha": 1.0,
+    "kappa": 1.0,
+    "suffix_decay": 1.0,
+    "online_weight": 1.0,
+    "vocab_size": 260,
+    "eos_id": 2,
+    "pad_id": 3
+  },
+  "source_report_sha256": "d133f2e4025070fa8e175b8f1120b8e58acb5ab6c708a7cb2b869d921f437e1a",
+  "source_manifest_sha256": "ba0c138104e60ab960effc2b4aef5896cb8b8ddc746992f0ee6ca3d54baaff3a",
+  "source_manifest_encoding": "json_compact",
+  "source_blocks": 400,
+  "selected_blocks": 1,
+  "complete_source": false,
+  "completed_blocks": 1,
+  "input_rows": 12480893,
+  "source_utf8_bytes": 25005291,
+  "lmdb_version": "2.3.0",
+  "contexts": 12480893,
+  "elapsed_seconds": 142.05963178304955,
+  "output": "/home/itcmaster/projects/blt-cache/runs/en-count-lmdb-preflight-20261025-02/counts.lmdb",
+  "output_bytes": 838443008,
+  "peak_host_rss_bytes": 900857856
+}

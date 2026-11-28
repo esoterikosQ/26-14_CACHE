@@ -1,0 +1,21 @@
+{
+  "run_id": "en-patcher-bg10gb-20261023-01",
+  "status": "failed",
+  "plan_sha256": "ea284b463617f452dbc69a15ad1f460df4dcd6e6eb998faaf45a5768a4111380",
+  "baseline_config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "stages": [
+    {
+      "stage": "verify",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg10gb-20261023-01/storage_equivalence.json",
+      "sha256": "012c33586dd4bb0f9b73b2238b346fb2a44d68634c40e688b06f2643ae04239d"
+    }
+  ],
+  "code_sha256": {
+    "scripts/run_background_expansion.py": "9ccff52887c3cbd31e8a53307a259559ebdd75ac884e0fb856df5344b3f032f1",
+    "scripts/fit_count_patcher.py": "07487f086a8ebba5f7a440fcf48645bfe05ce53c6a9753e628b816dc7f262618",
+    "src/phdq_blt_cache/count_patcher.py": "258c258d7d0d8167662558a36dae6cd0b09b6d66c3693b12f4f5de78cab70687"
+  },
+  "error_type": "CalledProcessError",
+  "error": "Command '['/home/itcmaster/projects/blt-cache/source/../.venv/bin/python', '-m', 'scripts.run_background_expansion', '--plan', '/home/itcmaster/projects/blt-cache/source/experiments/english_background_10gb.json', '--stage', 'prepare']' returned non-zero exit status 1.",
+  "elapsed_seconds": 8438.81338345306
+}

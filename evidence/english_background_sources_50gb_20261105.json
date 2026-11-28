@@ -1,0 +1,65 @@
+{
+  "run_id": "en-patcher-bg50gb-sources-20261105",
+  "status": "metadata_resolved",
+  "text_downloaded": false,
+  "seed": 20261029,
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "selection": "Same rule as the parent catalog: sort the 300 same-prefix parquet paths at the pinned revision, exclude the four original selected shards, shuffle with random.Random(20261029), take the first 24 of 296. The first 12 exactly reproduce the parent catalog; 12 are added for the 50GB expansion by user decision on 2026-11-05.",
+  "original_sources": "evidence/english_dataset_sources_20261019.json",
+  "sources": [
+    {
+      "repository": "HuggingFaceFW/fineweb",
+      "requested_revision": "v1.4.0",
+      "resolved_revision": "9bb295ddab0e05d785b879661af7260fed5140fc",
+      "prefix": "data/CC-MAIN-2025-05/",
+      "available_shards": 300,
+      "selected_shards": [
+        "data/CC-MAIN-2025-05/004_00011.parquet",
+        "data/CC-MAIN-2025-05/003_00048.parquet",
+        "data/CC-MAIN-2025-05/002_00019.parquet",
+        "data/CC-MAIN-2025-05/004_00012.parquet",
+        "data/CC-MAIN-2025-05/004_00043.parquet",
+        "data/CC-MAIN-2025-05/000_00029.parquet",
+        "data/CC-MAIN-2025-05/002_00024.parquet",
+        "data/CC-MAIN-2025-05/000_00041.parquet",
+        "data/CC-MAIN-2025-05/005_00040.parquet",
+        "data/CC-MAIN-2025-05/000_00042.parquet",
+        "data/CC-MAIN-2025-05/003_00033.parquet",
+        "data/CC-MAIN-2025-05/000_00047.parquet",
+        "data/CC-MAIN-2025-05/001_00009.parquet",
+        "data/CC-MAIN-2025-05/003_00044.parquet",
+        "data/CC-MAIN-2025-05/001_00028.parquet",
+        "data/CC-MAIN-2025-05/003_00049.parquet",
+        "data/CC-MAIN-2025-05/004_00032.parquet",
+        "data/CC-MAIN-2025-05/000_00012.parquet",
+        "data/CC-MAIN-2025-05/005_00021.parquet",
+        "data/CC-MAIN-2025-05/001_00005.parquet",
+        "data/CC-MAIN-2025-05/001_00042.parquet",
+        "data/CC-MAIN-2025-05/003_00026.parquet",
+        "data/CC-MAIN-2025-05/004_00027.parquet",
+        "data/CC-MAIN-2025-05/000_00031.parquet"
+      ]
+    }
+  ],
+  "parent_catalog": "evidence/english_background_sources_20261029.json",
+  "added_shards": [
+    "data/CC-MAIN-2025-05/001_00009.parquet",
+    "data/CC-MAIN-2025-05/003_00044.parquet",
+    "data/CC-MAIN-2025-05/001_00028.parquet",
+    "data/CC-MAIN-2025-05/003_00049.parquet",
+    "data/CC-MAIN-2025-05/004_00032.parquet",
+    "data/CC-MAIN-2025-05/000_00012.parquet",
+    "data/CC-MAIN-2025-05/005_00021.parquet",
+    "data/CC-MAIN-2025-05/001_00005.parquet",
+    "data/CC-MAIN-2025-05/001_00042.parquet",
+    "data/CC-MAIN-2025-05/003_00026.parquet",
+    "data/CC-MAIN-2025-05/004_00027.parquet",
+    "data/CC-MAIN-2025-05/000_00031.parquet"
+  ],
+  "selection_verification": {
+    "available_listed": 300,
+    "catalog_available": 300,
+    "reproduces_pinned_prefix": true,
+    "tool": "scripts/extend_shard_selection.py"
+  }
+}

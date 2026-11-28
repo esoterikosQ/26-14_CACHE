@@ -1,0 +1,77 @@
+{
+  "scope": "Descriptive review of all 18 fixed instruction9_v1 outputs; not a calibrated quality benchmark",
+  "source_report": "english_blt_instruction9_20261028.json",
+  "source_report_sha256": "08dab2512d81096c2ed5ded8522528a448b4923c3faef0115f00b26076234765",
+  "reviewer": "GitHub Copilot",
+  "method": "Single non-blinded assistant review of complete output text. Consecutive identical lines and blank-line runs were displayed with their counts; raw text remains unchanged in the source report.",
+  "rubric": {
+    "instruction_following": "met, partial, not_met, or unclear; considers the requested task and supplied constraints",
+    "task_completion": "complete, incomplete, or unclear; whether the requested core content reaches a resolution, full process, or recommendation, independently of EOS and any subsequent repetitive or unrelated tail",
+    "limitations": "Completion does not imply factual correctness, coherence, clean stopping, or usability. Notes record defects. No inter-rater agreement, blinded review, statistical significance, or acceptance threshold is claimed."
+  },
+  "cases": [
+    {
+      "name": "story_letter",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Starts with the letter but repeatedly wonders about the grandmother and mother; no resolution."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Introduces a funeral and a Resolution heading, then degenerates into repeated bank deposits and withdrawals; no coherent final ending."}
+      }
+    },
+    {
+      "name": "story_notebook",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Repeats speculation about a forgotten story without identifying the notebook owner or resolving the situation."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Escalating repetition of notebook/library phrases prevents a story resolution."}
+      }
+    },
+    {
+      "name": "story_clock",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Repeats the same paragraph under Resolution and Ending; leaves the clock issue open and adds unrelated website/commenting boilerplate before EOS."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Almost entirely repeats that villagers were astonished at the clock; no resolution."}
+      }
+    },
+    {
+      "name": "process_rain",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Mentions condensation and falling droplets but not the requested evaporation start; loops on the word precipitation."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "complete", "notes": "Initial paragraph spans evaporation, cooling, condensation and rainfall, with an imprecise account of wind carrying droplets to the ground. Repeats subsequent explanatory paragraphs until the cap."}
+      }
+    },
+    {
+      "name": "process_bread",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "complete", "notes": "Mentions mixing through baking and cooling, but stages are confused and cooling is described as making bread soft and elastic. Repeats the process instead of concluding cleanly."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "complete", "notes": "Gives mixing, kneading, shaping, baking and final cooling with an explicit completion statement, then repeats the explanation. Cooling dough is presented as a general stage; process accuracy is not established by this structural completion label."}
+      }
+    },
+    {
+      "name": "process_glass",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "complete", "notes": "Covers collection, cleaning/sorting, melting and new bottles at a high level, then repeats the description through the cap."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "complete", "notes": "Numbered steps reach new bottles and packaging, but then add irrelevant or misleading reuse/disposal/incineration steps and repeated caveats; not a reliable complete recycling explanation."}
+      }
+    },
+    {
+      "name": "compare_travel",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Contradictory claims make both options more reliable than the other; no single recommendation. Adds unsupported comfort claims and 1635 consecutive blank lines."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Calls both options more reliable and more expensive, falsely gives matching arrival times, and recommends both rather than choosing. Ends in 1359 blank lines."}
+      }
+    },
+    {
+      "name": "compare_laptop",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Starts by comparing battery and memory, then repeats contradictory capacity claims without a final choice."},
+        "count_lmdb": {"instruction_following": "partial", "task_completion": "complete", "notes": "Recommends A consistently with the battery preference, but incorrectly says A is more expensive and appends unrelated academic-paper ordering text before EOS."}
+      }
+    },
+    {
+      "name": "compare_backup",
+      "modes": {
+        "original_hf_default": {"instruction_following": "partial", "task_completion": "incomplete", "notes": "Repeats the supplied descriptions under Trade-off and Recommendation without choosing an option, then emits 1392 blank lines."},
+        "count_lmdb": {"instruction_following": "met", "task_completion": "complete", "notes": "Explains the manual-versus-automatic distinction and recommends B according to the stated preference. Reasoning is repetitive and omits deeper recurring-cost analysis; 938 subsequent blank lines prevent clean stopping."}
+      }
+    }
+  ]
+}

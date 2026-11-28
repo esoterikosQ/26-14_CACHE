@@ -1,0 +1,112 @@
+{
+  "scope": "Descriptive review of all 45 instruction9_v1 OSC decoding outputs; not a calibrated quality benchmark",
+  "source_report": "english_blt_decoding9_20261028.json",
+  "source_report_sha256": "5f5dc75c469fc521a457786703613bf3f2f6a1131c2cd8bb06ac3fd27e261673",
+  "reviewer": "GitHub Copilot",
+  "method": "Single non-blinded assistant review. All 36 new sampling outputs were read in full, with only consecutive identical lines collapsed with counts. Raw text remains unchanged in the source report. The nine greedy generations exactly match the earlier full-ID records; their instruction-following and completion labels and notes are reused from the prior review. Greedy factuality labels are limited assessments of those notes, not a new independent factual audit.",
+  "greedy_review_reuse": {
+    "source_review": "english_blt_instruction9_review_20261028.json",
+    "source_review_sha256": "76ee497cb46cd6ddcc5b38d27398acfa286529075db9b0429fbfb9ab0d1fcf9f",
+    "source_mode": "original_hf_default",
+    "full_id_matches": 9
+  },
+  "rubric": {
+    "instruction_following": "met/partial/not_met/unclear; includes supplied constraints, requested task and ending",
+    "task_completion": "complete/incomplete/unclear; a structural core endpoint, independent of EOS, subsequent tails and correctness. A definite but wrong recommendation can be complete; a process omitting the requested starting or ending stage is incomplete.",
+    "factuality": "no_obvious_error/has_error/unclear/not_applicable; supplied-number contradictions and invented material constraints count as errors. Fiction uses not_applicable; coherence defects are recorded in notes. Unclear is not a factuality pass.",
+    "limitations": "No external factual audit, blinded reviewers, inter-rater agreement, calibrated acceptance threshold or statistical generalization. EOS and low repeat8 do not imply completion, correctness or usability. Repetition flags are descriptive and may miss semantic repetition or boilerplate. Nucleus changes temperature and top_p jointly. Only two seeds and nine prompts were evaluated."
+  },
+  "conclusion": "Full-distribution sampling reduced measured repetition and increased EOS in this fixed sample, but seven of eighteen runs still capped and content failures remained. No practical-quality acceptance is established by these results.",
+  "cases": [
+    {
+      "name": "story_letter",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Starts with the letter but repeatedly wonders about the grandmother and mother; no resolution."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Switches Mina/Nina, introduces a missing sister and disconnected romance, shifts narrator and truncates mid-word without resolving the letter."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "not_met", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "One sentence about delivering a letter turns into an evaluation rubric, writing instructions and a JavaScript fragment; no coherent story ending."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Letter recipient and signature conflict; shifts to the mother and America with repeated feelings, then truncates without resolution."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Conflicting mother-alive/dead and age statements, pronoun shifts and repeated memories; no resolution before the cap."}
+      ]
+    },
+    {
+      "name": "story_notebook",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Repeats speculation about a forgotten story without identifying the notebook owner or resolving the situation."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Contradictory return/loss narrative and narrator shift; ends with the train still due and unrelated blog discussion text before EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Leaves notebook plot for a Personnel Office passage and disconnected courier story, truncating mid-word."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Infers notebook ownership after meeting a man, but the stated Ending reopens the mystery with a planned return next day; appends an answer/comment form before EOS."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Notebook is repeatedly handed between librarian, conductor and company, each promising to continue the story rather than resolving it."}
+      ]
+    },
+    {
+      "name": "story_clock",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Repeats the same paragraph under Resolution and Ending; leaves the clock issue open and adds unrelated website/commenting boilerplate before EOS."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Wanders through conflicting mechanical explanations and experts rather than resolving the clock/fair situation; truncates mid-word."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Drifts from faulty gears into disconnected fair-cleanup dialogue, names and events with repeated Continuation markers; no ending."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Claims three-minutes-slow, permanently ten-minutes-fast, repaired and unfixable states; an Ending is followed by a contradictory repeated article, not a coherent resolution."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "not_applicable", "notes": "Villagers repeatedly throw the clock into the river; claims an end and no clocks left, then continues the same unresolved repetitive action until capped."}
+      ]
+    },
+    {
+      "name": "process_rain",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "unclear", "notes": "Mentions condensation and falling droplets but not the requested evaporation start; loops on the word precipitation."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Omits evaporation, calls a raindrop a cumulus cloud and gives confused storm claims, then appends Quia activity boilerplate before EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Omits the evaporation start; mistakes vapour for condensation nuclei, gives invented meteorological laws and drifts into charged droplets before truncating."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Starts with condensation, mentions evaporation only after rainfall and repeats the cycle. Claims condensation cools air and cloud vapour melts as rain; no ordered evaporation-to-rainfall account."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Omits evaporation; misstates cumulus/cumulonimbus altitude and saturation, including saturation only below freezing and rain formation completing when collisions stop. Ends in comment boilerplate before EOS."}
+      ]
+    },
+    {
+      "name": "process_bread",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Mentions mixing through baking and cooling, but stages are confused and cooling is described as making bread soft and elastic. Repeats the process instead of concluding cleanly."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "unclear", "notes": "Ingredient lists, mixer questions and garbled yeast statements reach rising only, then EOS; baking and cooling are absent."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Misstates wheat anatomy and attributes pollen and white-bread lift to germ; cooling discussion precedes a garbled dough recipe which truncates without an ordered complete process."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Reaches mixing, kneading, fermentation, shaping, baking and cooling, then repeats conclusions and adds serving stages. Conflates fermentation with starch-to-sugar conversion rather than sugar metabolism; cap truncates another repetition."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "unclear", "notes": "Long ingredient explanations and repeated knead/rest instructions never reach baking and cooling before the cap; causal claims about salt and rising are imprecise."}
+      ]
+    },
+    {
+      "name": "process_glass",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "complete", "factuality": "unclear", "notes": "Covers collection, cleaning/sorting, melting and new bottles at a high level, then repeats the description through the cap."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "not_met", "task_completion": "incomplete", "factuality": "has_error", "notes": "Substitutes PET plastic recycling for glass, with dubious scanner/material steps and plastic blow molding. A plastic product endpoint does not complete the requested glass process despite EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "unclear", "notes": "Brief vague fragment about breaking and cleaning glass omits collection detail, melting, forming and new bottles before EOS."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Reaches collection, crushing/cleaning, melting and molding bottles, but later mixes plastic/aluminum with glass-bottle categories and adds repeated Q&A/comment boilerplate through the cap."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Reaches new bottles and shipping, but claims a protective layer prevents glass rust and gives misleading melt/shape/cool stages and temperature. Repeats the account and truncates a conclusion."}
+      ]
+    },
+    {
+      "name": "compare_travel",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Contradictory claims make both options more reliable than the other; no single recommendation. Adds unsupported comfort claims and 1635 consecutive blank lines."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "not_met", "task_completion": "incomplete", "factuality": "has_error", "notes": "Gives sales advice and invents a $125 direct-flight option rather than comparing the supplied train and buses; unrelated product/search text before EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Identifies Option A under Recommendation and discusses the trade-off, but invents Wednesday bus absence and rain protection, says seven minutes instead of thirty and reverses the reliability comparison; ends in help-page text."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Initially gives the sensible A-reliability/B-price distinction and chooses A, then fabricates a Boston/San Francisco student group and company budget constraints, restates a new task and ends in a reply form."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Explicitly chooses buses despite reliability preference; fabricates round-trip totals ($45 one-way to $135) and contradicts relative costs, then drifts into course advertising until capped."}
+      ]
+    },
+    {
+      "name": "compare_laptop",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Starts by comparing battery and memory, then repeats contradictory capacity claims without a final choice."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Invents a 16-hour battery, then gives both eight-hour batteries and both $700 prices; suggests both rather than making one consistent recommendation before EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Invents screens, storage, ports, currency and 16/18-hour battery; recommends the business-camera laptop for movies/ports, not the supplied battery-first comparison, then shop-like text."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Chooses B for memory despite battery priority, incorrectly gives equal memory and a $300 difference, and reverses battery claims. Adds essay-ordering and repeated assignment questions through the cap."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Changes user priority to memory, chooses B and falsely gives B longer battery while contradicting memory comparisons; repeats fabricated product-description claims until capped."}
+      ]
+    },
+    {
+      "name": "compare_backup",
+      "runs": [
+        {"policy": "greedy", "seed": null, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "unclear", "notes": "Repeats the supplied descriptions under Trade-off and Recommendation without choosing an option, then emits 1392 blank lines."},
+        {"policy": "full_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Calls A best because scheduling is supposedly unnecessary despite manual backups, then also offers B without a consistent final choice; drifts into invented photo-storage/lighting advertising before EOS."},
+        {"policy": "full_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "incomplete", "factuality": "has_error", "notes": "Changes B from $5/month to $360 monthly plus bandwidth and family pricing; no recommendation before EOS."},
+        {"policy": "nucleus_sampling", "seed": 42, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Assigns both drive/cloud costs to both options, chooses A for control instead of the automatic-backup priority and invents cloud restrictions; appends paper-ordering boilerplate before EOS."},
+        {"policy": "nucleus_sampling", "seed": 20261027, "instruction_following": "partial", "task_completion": "complete", "factuality": "has_error", "notes": "Correctly recommends cloud for automation and mentions reliable connectivity/monthly cost, but labels A automatic before describing it as manual and says cloud needs no money despite its fee; ends with a coupon/order command before EOS."}
+      ]
+    }
+  ]
+}

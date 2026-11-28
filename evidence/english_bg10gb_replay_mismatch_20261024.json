@@ -1,0 +1,44 @@
+{
+  "status": "failed",
+  "mismatches": {
+    "auprc_average_precision": {
+      "reference": 0.8409333314375305,
+      "replayed": 0.8409333314375304,
+      "saved": 0.8409333314375305,
+      "absolute_difference": 1.1102230246251565e-16
+    }
+  },
+  "all_metrics": {
+    "f1": {
+      "reference": 0.7804204849787754,
+      "replayed": 0.7804204849787754
+    },
+    "entropy_mae": {
+      "reference": 0.4593532114236907,
+      "replayed": 0.4593532114236907
+    },
+    "entropy_rmse": {
+      "reference": 0.675893119286452,
+      "replayed": 0.675893119286452
+    },
+    "log_loss": {
+      "reference": 0.24032411207525203,
+      "replayed": 0.24032411207525203
+    },
+    "auprc_average_precision": {
+      "reference": 0.8409333314375305,
+      "replayed": 0.8409333314375304
+    }
+  },
+  "document_counts_equal": true,
+  "training_feature_chunks_equal": 6,
+  "parent_report_sha256": "1070d62ecbc53ff85940cbedd9a6562a983efd4551997351aba7c4771334cbc6",
+  "replay_sha256": "3db0861ca473d029b6e1f503fe37ff91d82d52420d5831fe102d9f592bc52224",
+  "numpy_version": "2.4.6",
+  "elapsed_seconds": 2618.441788203083,
+  "thread_environment": {
+    "OPENBLAS_NUM_THREADS": null,
+    "OMP_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null
+  }
+}

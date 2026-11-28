@@ -1,0 +1,50 @@
+{
+  "status": "verified",
+  "input": "../runs/en-patcher-bg5gb-20261020-01/background.jsonl",
+  "input_sha256": "8a33e9a537aa834d4783fe3c793b69502ffcccd34065e3194a702f0da9f63b80",
+  "sample_documents": 20000,
+  "reports": {
+    "python": {
+      "documents": 8004,
+      "duplicates_removed": {},
+      "utf8_bytes": 49092838,
+      "backend": "python",
+      "elapsed_seconds": 12.475322660058737,
+      "peak_host_rss_bytes": 494919680,
+      "output_sha256": "3b39d7ce1a48831c668815ad5bcbfb9c3c74f0a14da12b30c2e509982d9bf98b"
+    },
+    "disk_cpp": {
+      "documents": 8004,
+      "utf8_bytes": 49092838,
+      "length_bands": {
+        "short": 2669,
+        "medium": 2668,
+        "long": 2667
+      },
+      "candidate_documents": 19999,
+      "duplicates_removed": {},
+      "original_background_documents_retained": 1,
+      "database_bytes": 165408768,
+      "backend": "disk_cpp",
+      "elapsed_seconds": 14.184146511834115,
+      "peak_host_rss_bytes": 200339456,
+      "output_sha256": "3b39d7ce1a48831c668815ad5bcbfb9c3c74f0a14da12b30c2e509982d9bf98b"
+    }
+  },
+  "outputs_equal": true,
+  "kernel": {
+    "documents": 500,
+    "all_signatures_equal": true,
+    "python_seconds": 0.3181156129576266,
+    "cpp_seconds": 0.30218261992558837,
+    "python_over_cpp": 1.0527263713444595,
+    "scope": "5-word shingle creation, SHA1, permutation and reduction; excludes LSH/SQLite"
+  },
+  "limitations": "Fixed prefix only; worker RSS includes its imports/sample scan; not a 10GB peak bound or downstream inference benchmark",
+  "code_sha256": {
+    "scripts/benchmark_disk_preparation.py": "70aece12255b37cda76b98c711f2eb1ca6b6403abb0bcca9e8eaf4ace9f2cef5",
+    "scripts/disk_dedup.py": "57a9e1a8db9c0d63c6e21b5942f38b278d9d2df721e4b79ffd312bb8ac079c80",
+    "scripts/native_minhash.py": "ca3dc1e4ee1461cccd6359c98f1c2f29e3f3c1bbf335d865f09124691cb5c260",
+    "scripts/native/minhash.cpp": "fe21fb3b468432bd54a94a7ea40e97137aeef215d241190cc1f5de88a0683ad6"
+  }
+}

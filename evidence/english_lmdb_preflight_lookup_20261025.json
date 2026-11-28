@@ -1,0 +1,159 @@
+{
+  "status": "exact_counts_probabilities_boundaries",
+  "source": {
+    "complete_source": false,
+    "completed_blocks": 1,
+    "config": {
+      "alpha": 1.0,
+      "eos_id": 2,
+      "kappa": 1.0,
+      "max_context": 8,
+      "online_weight": 1.0,
+      "pad_id": 3,
+      "suffix_decay": 1.0,
+      "vocab_size": 260,
+      "window": null
+    },
+    "contexts": 12480893,
+    "elapsed_seconds": 142.05963178304955,
+    "format": "phdq_count_lmdb_v1",
+    "input_rows": 12480893,
+    "lmdb_version": "2.3.0",
+    "selected_blocks": 1,
+    "source_blocks": 400,
+    "source_manifest_encoding": "json_compact",
+    "source_manifest_sha256": "ba0c138104e60ab960effc2b4aef5896cb8b8ddc746992f0ee6ca3d54baaff3a",
+    "source_report_sha256": "d133f2e4025070fa8e175b8f1120b8e58acb5ab6c708a7cb2b869d921f437e1a",
+    "source_utf8_bytes": 25005291,
+    "status": "complete"
+  },
+  "background_report_sha256": "d133f2e4025070fa8e175b8f1120b8e58acb5ab6c708a7cb2b869d921f437e1a",
+  "benchmark_code_sha256": "0835f2deb855dfc7fa6945cd6d29249c690ec57027b7baf03d18e578074c2231",
+  "backend_code_sha256": "c97138309c8f13309965b3a06b50aee931f369b736649e0ca69d12b37b23bddf",
+  "documents": [
+    {
+      "document_id": "<urn:uuid:36a31051-e615-47f6-a753-99beb595ba3f>",
+      "text_sha256": "6d02af72ab6d4d64affda565316dfceacefdd209bedf5bbbe0c3b206ef3233f1",
+      "utf8_bytes": 471
+    },
+    {
+      "document_id": "<urn:uuid:59919076-6bb6-4b65-92ef-2d3032c0ea38>",
+      "text_sha256": "dada722d351f8d9a2eba4051d3f73f03ab2c04a98d895f44f63234dea7a42922",
+      "utf8_bytes": 512
+    },
+    {
+      "document_id": "<urn:uuid:c48bc990-f988-417e-942b-25157507f2da>",
+      "text_sha256": "c5b9152901203005802872803dd899f7e215c910e73e3f2ba42aa17070e97dfd",
+      "utf8_bytes": 512
+    },
+    {
+      "document_id": "<urn:uuid:c9be2297-9d32-4fd8-86dd-498c5eaf20a1>",
+      "text_sha256": "0237871e2fc14686dee9656fc10a4eba54d87f6c3407864747b913a76421bb14",
+      "utf8_bytes": 512
+    }
+  ],
+  "input_ids": 2011,
+  "lookup_calls_per_pass": 17991,
+  "unique_contexts": 10204,
+  "reference_load_seconds": 11.18503528367728,
+  "cases": {
+    "memory_projected": {
+      "lookup": {
+        "median_ms": 1.3284841552376747,
+        "mean_ms": 1.3296887278556824,
+        "stdev_ms": 0.004653597255739558,
+        "p95_ms": 1.3366828672587872,
+        "runs_ms": [
+          1.3385950587689877,
+          1.3290341012179852,
+          1.3251053169369698,
+          1.3284841552376747,
+          1.3272250071167946
+        ]
+      },
+      "patcher": {
+        "median_ms": 115.82305608317256,
+        "mean_ms": 117.79457684606314,
+        "stdev_ms": 3.716825986539541,
+        "p95_ms": 123.47192242741585,
+        "runs_ms": [
+          115.60786282643676,
+          125.19927695393562,
+          116.56250432133675,
+          115.780184045434,
+          115.82305608317256
+        ]
+      }
+    },
+    "lmdb_cache_0": {
+      "lookup": {
+        "median_ms": 51.76728591322899,
+        "mean_ms": 51.78289748728275,
+        "stdev_ms": 0.06680896176552041,
+        "p95_ms": 51.883942633867264,
+        "runs_ms": [
+          51.91195709630847,
+          51.77188478410244,
+          51.76728591322899,
+          51.726714707911015,
+          51.73664493486285
+        ]
+      },
+      "patcher": {
+        "median_ms": 170.9558367729187,
+        "mean_ms": 170.88762614876032,
+        "stdev_ms": 0.17987369484546678,
+        "p95_ms": 171.0325456224382,
+        "runs_ms": [
+          170.5392929725349,
+          170.90536607429385,
+          171.04169772937894,
+          170.9959371946752,
+          170.9558367729187
+        ]
+      },
+      "cache_info": {
+        "hits": 0,
+        "misses": 262042,
+        "maxsize": 0,
+        "currsize": 0
+      }
+    },
+    "lmdb_cache_4096": {
+      "lookup": {
+        "median_ms": 16.85768412426114,
+        "mean_ms": 17.03086793422699,
+        "stdev_ms": 0.3339613784734932,
+        "p95_ms": 17.545355949550867,
+        "runs_ms": [
+          17.689633648842573,
+          16.968245152384043,
+          16.85768412426114,
+          16.806792933493853,
+          16.83198381215334
+        ]
+      },
+      "patcher": {
+        "median_ms": 139.34800075367093,
+        "mean_ms": 141.6229541413486,
+        "stdev_ms": 4.608948897952641,
+        "p95_ms": 148.56792222708464,
+        "runs_ms": [
+          139.34800075367093,
+          139.4852241501212,
+          139.2687503248453,
+          139.17419873178005,
+          150.8385967463255
+        ]
+      },
+      "cache_info": {
+        "hits": 119627,
+        "misses": 142415,
+        "maxsize": 4096,
+        "currsize": 4096
+      }
+    }
+  },
+  "peak_host_rss_bytes": 468410368,
+  "limitations": "Small known development prefixes; page/cache warmed by correctness checks. No cold-cache, full-database, fitted-rule, GPU or BLT end-to-end speed claim."
+}

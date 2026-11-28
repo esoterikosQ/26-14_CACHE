@@ -1,0 +1,32 @@
+{
+  "run_id": "en-patcher-bg20gb-nested-20261029-02",
+  "status": "metadata_resolved",
+  "text_downloaded": false,
+  "seed": 20261029,
+  "config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "selection": "Sort same-prefix parquet paths at the pinned revision, exclude the four original selected shards, shuffle with random.Random(20261029), take the first12 of296. New background candidates only; existing evaluation sources and parent10GB remain unchanged.",
+  "original_sources": "evidence/english_dataset_sources_20261019.json",
+  "sources": [
+    {
+      "repository": "HuggingFaceFW/fineweb",
+      "requested_revision": "v1.4.0",
+      "resolved_revision": "9bb295ddab0e05d785b879661af7260fed5140fc",
+      "prefix": "data/CC-MAIN-2025-05/",
+      "available_shards": 300,
+      "selected_shards": [
+        "data/CC-MAIN-2025-05/004_00011.parquet",
+        "data/CC-MAIN-2025-05/003_00048.parquet",
+        "data/CC-MAIN-2025-05/002_00019.parquet",
+        "data/CC-MAIN-2025-05/004_00012.parquet",
+        "data/CC-MAIN-2025-05/004_00043.parquet",
+        "data/CC-MAIN-2025-05/000_00029.parquet",
+        "data/CC-MAIN-2025-05/002_00024.parquet",
+        "data/CC-MAIN-2025-05/000_00041.parquet",
+        "data/CC-MAIN-2025-05/005_00040.parquet",
+        "data/CC-MAIN-2025-05/000_00042.parquet",
+        "data/CC-MAIN-2025-05/003_00033.parquet",
+        "data/CC-MAIN-2025-05/000_00047.parquet"
+      ]
+    }
+  ]
+}

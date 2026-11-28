@@ -1,0 +1,39 @@
+{
+  "run_id": "en-patcher-bg5gb-20261020-01",
+  "status": "completed",
+  "plan_sha256": "5bfdae16193c257c10c587d38837a84f0c71de8f771d5034c846cab59543781e",
+  "baseline_config_sha256": "6043b4e375cabca5744d91a948add168cf4a90bd4365d6df3129c98c6c4eba64",
+  "stages": [
+    {
+      "stage": "verify",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg5gb-20261020-01/storage_equivalence.json",
+      "sha256": "103b8f1636e6f76f60184e79afc01156e038a4086064439b915ae5549744cacd"
+    },
+    {
+      "stage": "prepare",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg5gb-20261020-01/data_preparation.json",
+      "sha256": "c6bc25da6d0e41ea78a8195c7c7a55fd42e5233c298f3c541745bc482876a853"
+    },
+    {
+      "stage": "build",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg5gb-20261020-01/background_build.json",
+      "sha256": "5cb79484c1173fb723475fc41aabef2ad0ad3286e50472d26ceb13cfb6be7116"
+    },
+    {
+      "stage": "fit",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg5gb-20261020-01/fit/report.json",
+      "sha256": "1070d62ecbc53ff85940cbedd9a6562a983efd4551997351aba7c4771334cbc6"
+    },
+    {
+      "stage": "compare",
+      "artifact": "/home/itcmaster/projects/blt-cache/runs/en-patcher-bg5gb-20261020-01/comparison.json",
+      "sha256": "b3c8b3e316a5cdaaa52faeece6d2aa00cf945109de5964ed702553f0b3ea7f7c"
+    }
+  ],
+  "code_sha256": {
+    "scripts/run_background_expansion.py": "9ccff52887c3cbd31e8a53307a259559ebdd75ac884e0fb856df5344b3f032f1",
+    "scripts/fit_count_patcher.py": "07487f086a8ebba5f7a440fcf48645bfe05ce53c6a9753e628b816dc7f262618",
+    "src/phdq_blt_cache/count_patcher.py": "258c258d7d0d8167662558a36dae6cd0b09b6d66c3693b12f4f5de78cab70687"
+  },
+  "elapsed_seconds": 32439.53187689837
+}
