@@ -21,3 +21,14 @@
 Neuron의 실행·전송·제출은 전부 사용자가 직접 수행한다.
 제출은 부모 디렉터리에서 절대경로 스크립트로 한다. job 내부 cwd는 `neuron/runtime/`이다.
 기존 phdq3 데이터·가중치·실행 환경을 자동으로 옮기거나 덮어쓰지 않는다.
+
+
+- 깃허브 연동
+```bash
+git status --short # 현재 브랜치와 변경 파일 확인
+git sparse-checkout add neuron runtimelog
+git fetch origin
+git merge --ff-only origin/main
+git rev-parse HEAD
+python neuron/bundle.py verify
+```

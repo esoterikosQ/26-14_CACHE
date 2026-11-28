@@ -1,17 +1,16 @@
-# Experiment evidence index
+# 실험 근거 색인
 
-The `evidence/` directory is a copy of the small `p3a_*.json` reports from
-`phdq3/blt_hf_checks/results/` at export time. It is historical evidence, not
-an executable fixture or a replacement for raw model/data identities.
+`evidence/` 디렉터리는 분리 시점에 `phdq3/blt_hf_checks/results/`에 있던 작은
+`p3a_*.json` 보고서를 복사한 것이다. 과거 실험의 근거이며, 실행 가능한 테스트
+입력이나 원본 모델·데이터 식별 정보를 대신하는 자료가 아니다.
 
-| Question | Main report | Finding |
+| 확인 사항 | 주요 보고서 | 관측 결과 |
 | --- | --- | --- |
-| Can earlier patch boundaries move? | `p3a_patch_causality_20260926_v2.json` | Yes, observed BF16 threshold crossings in mixed prefixes. |
-| Are closed activations numerically stable? | `p3a_state_stability_repeat_20260926.json` | No across input lengths; same-length repeat was stable in the tested set. |
-| Does simple global reuse preserve full native output? | `p3a_native_full_global_06.json` | No, 32/2,634 strings differed. |
-| What caused first divergences? | `p3a_native_divergence_diag_07.json`, `p3a_native_divergence_logit_shape_08.json` | Both global skip and the HF `logits_to_keep=1` shape mattered. |
-| Does guarded reuse preserve native output and save time? | `p3a_native_full_guarded_11.json` | Yes for that A100/native/beam-1/batch-1 run: 2,634/2,634 matched; generation-only 1.314x faster. |
+| 과거 패치 경계가 바뀔 수 있는가? | `p3a_patch_causality_20260926_v2.json` | 그렇다. 혼합 접두부에서 BF16 임계값 판정이 뒤집히는 현상을 관측했다. |
+| 닫힌 구간의 활성값은 수치적으로 안정적인가? | `p3a_state_stability_repeat_20260926.json` | 입력 길이가 달라지면 안정적이지 않았다. 검사한 집합에서는 같은 길이의 반복 실행이 안정적이었다. |
+| 단순 전역 재사용이 네이티브 전체 출력을 보존하는가? | `p3a_native_full_global_06.json` | 아니다. 32/2,634개 문자열이 달랐다. |
+| 처음 출력이 갈라지는 데 영향을 준 요소는 무엇인가? | `p3a_native_divergence_diag_07.json`, `p3a_native_divergence_logit_shape_08.json` | 전역 계산 생략과 HF의 `logits_to_keep=1`에 따른 연산 형상이 모두 영향을 줬다. |
+| 가드 적용 재사용은 네이티브 출력을 보존하면서 시간을 줄이는가? | `p3a_native_full_guarded_11.json` | 해당 A100/네이티브/빔-1/배치-1 실행에서는 그렇다. 2,634/2,634개가 일치했고 생성만 측정한 시간은 1.314배 빨랐다. |
 
-Each report is tied to its original `phdq3` code/model/evaluation identity.
-Do not substitute these results for tests of the independently installed
-package or a future modified cache.
+각 보고서는 당시의 `phdq3` 코드·모델·평가 식별 정보에 연결돼 있다.
+독립적으로 설치한 패키지나 향후 변경할 캐시의 검증을 이 결과로 대신하지 않는다.
