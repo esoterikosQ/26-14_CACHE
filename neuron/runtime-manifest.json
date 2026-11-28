@@ -16,6 +16,7 @@
     "blt_hf/body_train.py": "dd6433a01611ca62b62ac70ea27014164e0e12bdd23709c9d854efe8be155cf9",
     "blt_hf/fast_body.py": "afd61b11537d1b4a72942546b7b1d3e40fd9b08d4c9df5ccd38c6e6af7e636b0",
     "blt_hf/count_sample.py": "118f5afe26e3dc0622e19c195c15b1992cac213f09a52d709482a3050cc21235",
+    "blt_hf/body_export.py": "16294d14497f666c278fc7b89c490eca069c0e942dac7fb3c6325ce7d1aa9740",
     "blt_hf/training.py": "6135611603be7b43d3182c23ad96cdfcf03e7705d44f9caed683887e6d1585d6",
     "blt_hf/model.py": "028ea6d9223dc76626f6571283681c017665df93bbadb4a9d1afa55a1c68a242",
     "blt_hf/manifest.py": "441e0e3a1e72fe37b57d8fc592dd873016463bc51df6c8d289103a2bc27560a0",
@@ -29,7 +30,7 @@
     "tests/test_hf_entropy_combine.py": "c8928d19c787de56274097a80aab5cf93b6934bd71e55dcfe23b483f15625ede",
     "tests/test_hf_training.py": "b831cc6d2dab79358e8cf9e89d2725e81267406170c1dc0e6b4fe86db2f6e950",
     "tests/test_hf_patcher_compare.py": "e44a6af3d0597de216b7f5359a8cdd815f25ff0817ebec8ebfa18dee2bfeb9ef",
-    "tests/test_hf_body_train.py": "fe97cb50f2cc6cc40413647c1accc416b52f4726e358110a9a89acd590f96b3d",
+    "tests/test_hf_body_train.py": "dec42e9148ee474dd44201aaa0cfafa67911853758dc4b9e979a216994154aee",
     "tests/test_hf_count_sample.py": "5c3d2586c0c27e29efe221ec52e89936631906dc0fade1faf6e58a099d25fa30",
     "plan/korean_entropy_preparation.json": "da2a30c1f3a59186018a492694f068467db558755ddee2169c47838f8dcd0b1d",
     "plan/nikl_sources.json": "2cd8cb49225779165174e929a51d0fe1c274882284ad21b945cc237f1ef4ae72"

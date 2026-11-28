@@ -3,7 +3,8 @@
 모든 명령은 **사용자가 Neuron에서 직접 실행**한다. 셸은 bash 기준이다.
 phdq3는 파일/정책을 참고하는 읽기 전용 프로젝트다. 이번 코드·설정·로그는 blt-cache에서만 관리한다.
 현재 실행기는 한국어 entropy 패처 학습(`train_entropy.sh`), 패처 비교(`compare_patchers.sh`, 12절),
-본체 전체 추가 학습(`train_body.sh`, 13절), 한국어 count 패처 자료 추출(`sample_count_data.sh`, 14절)이다. ENCODER/HASH 부분 학습은 아직 없다.
+본체 전체 추가 학습(`train_body.sh`, 13절), 한국어 count 패처 자료 추출(`sample_count_data.sh`, 14절),
+본체 가중치 export(`export_body.sh`, 15절)이다. ENCODER/HASH 부분 학습은 아직 없다.
 영어20GB 작업은 itcerdo에서 별도로 실행하므로 여기서 다시 시작하지 않는다.
 NIKL audit/split은 사용자 보고서로 완료를 확인했다. FineWeb2 전체 train 확보/통합은 아래6-4절을 따른다.
 통합 자료 검토, 학습 예산 확정, GPU 학습 파일럿은 아직 완료되지 않았다.
@@ -847,4 +848,45 @@ rsync -rt "$NEURON:/scratch/r984a02/blt-cache/data/korean_cpt/count_samples/ko-c
 rsync -rt --include 'final-00137500.*' --exclude '*' "$NEURON:/scratch/r984a02/blt-cache/outputs/korean_entropy/ko-entropy-h200-20261107-01/" /Volumes/T31/blt-cache/t14/run1/
 rsync -rt /Volumes/T31/blt-cache/t14/ko-count-sample-20261127-01/ itcerdo:/home/itcmaster/projects/blt-cache/datasets/ko-count-sample-20261127-01/
 rsync -rt /Volumes/T31/blt-cache/t14/run1/ itcerdo:/home/itcmaster/projects/blt-cache/artifacts/korean_entropy/ko-entropy-h200-20261107-01/
+```
+
+## 15. C 본체 export와 itcerdo 전송(T14 BLT 비교)
+
+C 본 학습(13-5)이 끝나 `validation-final.json`이 생긴 뒤 실행한다. 최종 checkpoint(약 55GB)에서 본체 가중치만
+BF16 safetensors로 뽑는다. 학습 중 모델이 쓰던 BF16 값과 같고, optimizer·RNG 상태와 패처는 넣지 않는다
+(itcerdo에서 run1 checkpoint를 따로 불러 SHA를 대조한다). cpu 파티션(CPU 4, 64GB, 최대 4시간)을 쓴다.
+결과는 `body.safetensors`(약 9.3GB)와 `export.json`(원본 checkpoint SHA, run 계약, step, 최종 검증 BPB, 본체 SHA)이다.
+
+남은 C job이 아직 없으면 먼저 이어 제출한다(남은 약 1580 step과 최종 검증, 약 10시간).
+
+```bash
+C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-20261117-01.json
+sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
+```
+
+코드를 갱신(2절)한 뒤 `blt-cache`에서 제출한다. C 마지막 job 번호를 알면 `--dependency=afterok:C_JOB_번호`를 붙여
+미리 걸어 둘 수 있다(정상 종료 때만 시작한다).
+
+```bash
+sbatch --export=ALL,RUN_ID=ko-body-full-run1-45-20261117-01 neuron/export_body.sh
+```
+
+끝나면 로그 마지막 줄의 `"status": "exported"`와 step 30000을 확인한다. 로그는 11절처럼 push한다.
+
+```bash
+tail -n 2 runtimelog/body-export-JOB_번호.out
+ls -la outputs/korean_body_export/ko-body-full-run1-45-20261117-01/final-00030000
+```
+
+| 옮길 것 | itcerdo 경로 |
+| --- | --- |
+| `outputs/korean_body_export/ko-body-full-run1-45-20261117-01/final-00030000/`의 파일 2개 | `/home/itcmaster/projects/blt-cache/artifacts/korean_body_export/ko-body-full-run1-45-20261117-01/final-00030000/` |
+
+Mac을 거치는 예다. Mac 내부 디스크는 여유가 부족하므로 T31을 연결한 뒤 **Mac 터미널**에서 실행한다.
+
+```bash
+NEURON=평소_쓰는_Neuron_접속_이름
+mkdir -p /Volumes/T31/blt-cache/t14/body
+rsync -rt "$NEURON:/scratch/r984a02/blt-cache/outputs/korean_body_export/ko-body-full-run1-45-20261117-01/final-00030000" /Volumes/T31/blt-cache/t14/body/
+rsync -rt /Volumes/T31/blt-cache/t14/body/final-00030000 itcerdo:/home/itcmaster/projects/blt-cache/artifacts/korean_body_export/ko-body-full-run1-45-20261117-01/
 ```

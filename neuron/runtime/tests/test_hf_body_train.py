@@ -239,6 +239,48 @@ class BodyTraining(unittest.TestCase):
         trained = json.loads((straight / 'trainable.json').read_text())
         self.assertFalse(any(name.startswith('model.patcher.') for name in trained))
 
+    def test_export_matches_master_weights_and_loads_into_public_model(self):
+        import shutil
+        from safetensors.torch import load_file, save_file
+        from blt_hf.body_export import export, load_exported_body
+        from blt_hf.body_train import load_body, run
+        run_dir = self.root / 'trained'
+        self.assertEqual(run(body_config(self.root, self.model_path, self.manifest, run_dir), stop_after_steps=2), 0)
+        checkpoint = run_dir / 'step-00000002.pt'
+        report = export(run_dir, checkpoint, self.root / 'export')
+        state = torch.load(checkpoint, map_location='cpu', weights_only=True)
+        tensors = load_file(str(self.root / 'export/body.safetensors'))
+        self.assertEqual(list(report['shapes']), list(state['master']))
+        self.assertEqual(report['progress']['step'], 2)
+        self.assertIsNone(report['validation_final'])
+        for name, weight in state['master'].items():
+            self.assertTrue(torch.equal(tensors[name], weight.to(torch.bfloat16)), name)
+        public = dict(load_body(self.model_path, report['contract']['config']['patcher'], 'eager').named_parameters())
+        model, manifest = load_exported_body(self.model_path, self.root / 'export')
+        self.assertEqual(manifest['body_sha256'], report['body_sha256'])
+        loaded = dict(model.named_parameters())
+        self.assertFalse(any(parameter.requires_grad for parameter in loaded.values()))
+        for name, value in loaded.items():
+            expected = public[name] if name.startswith('model.patcher.') else state['master'][name].to(torch.bfloat16)
+            self.assertTrue(torch.equal(value.cpu(), expected.cpu()), name)
+        with self.assertRaises(FileExistsError):
+            export(run_dir, checkpoint, self.root / 'export')
+        tampered = self.root / 'tampered'
+        shutil.copytree(self.root / 'export', tampered)
+        first = next(iter(tensors))
+        save_file({**tensors, first: tensors[first] + 1}, str(tampered / 'body.safetensors'))
+        with self.assertRaisesRegex(ValueError, 'body hash mismatch'):
+            load_exported_body(self.model_path, tampered)
+        other = self.root / 'other'
+        self.assertEqual(run(body_config(self.root, self.model_path, self.manifest, other, lr=2e-3),
+                             stop_after_steps=2), 0)
+        for suffix in ('.pt', '.sha256'):
+            shutil.copy(other / f'step-00000002{suffix}', run_dir / f'step-00000009{suffix}')
+        with self.assertRaisesRegex(ValueError, 'different run contract'):
+            export(run_dir, run_dir / 'step-00000009.pt', self.root / 'foreign')
+        with self.assertRaisesRegex(ValueError, 'belong to the given run'):
+            export(run_dir, other / 'step-00000002.pt', self.root / 'outside')
+
 
 if __name__ == '__main__':
     unittest.main()
