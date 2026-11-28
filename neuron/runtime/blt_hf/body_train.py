@@ -26,6 +26,7 @@ HASH_EMBEDDING = 'model.encoder_hash_tok_embedding.weight'
 POSITIVE_INTEGERS = ('sequence_bytes', 'step_bytes', 'save_every', 'keep_checkpoints', 'threads',
                      'min_free_disk_bytes', 'eval_every', 'eval_documents', 'final_eval_documents',
                      'plateau_patience', 'min_decay_steps')
+BRANCH_KEYS = ('run_dir', 'max_steps', 'max_train_bytes', 'max_seconds', 'max_run_bytes', 'init_from')
 
 
 class ChunkStream:
@@ -211,6 +212,46 @@ def restore(path, parameters, names, master, optimizer, signature):
     return state['progress']
 
 
+def branch_from(config, identity, parameters, names, master, optimizer):
+    """Continue another BODY_FULL run from a checkpoint without decayed updates, under new run limits.
+
+    Weights, AdamW and RNG state, data position, elapsed time and the evaluation history used by the plateau
+    rule carry over and any scheduled decay is dropped, so training proceeds as if the parent had been approved
+    with these limits. Every other config key and the data/model identity must match the parent run.
+    """
+    import torch
+    path = Path(config['init_from']['checkpoint'])
+    digest = file_sha256(path)
+    if digest != config['init_from']['sha256'] or path.with_suffix('.sha256').read_text().strip() != digest:
+        raise ValueError('init_from checkpoint hash mismatch')
+    parent = json.loads((path.parent / 'contract.json').read_text())
+    state = torch.load(path, map_location='cpu', mmap=True, weights_only=True)
+    if state['signature'] != hashlib.sha256(json.dumps(parent, sort_keys=True).encode()).hexdigest():
+        raise ValueError('init_from checkpoint does not belong to its run contract')
+    kept = lambda values: {key: value for key, value in values.items() if key not in BRANCH_KEYS}
+    if kept(parent['config']) != kept(config):
+        raise ValueError('init_from run config differs beyond the run limits')
+    for key in ('manifest_sha256', 'weights_sha256', 'model_config_sha256', 'trainable_sha256'):
+        if parent[key] != identity[key]:
+            raise ValueError(f'init_from {key} differs')
+    if list(state['master']) != list(names):
+        raise ValueError('init_from parameter names differ')
+    progress = dict(state['progress'])
+    if progress['decay'] is not None and progress['decay']['start'] != progress['step']:
+        raise ValueError('init_from checkpoint already contains decayed updates')
+    with torch.no_grad():
+        for weight, parameter, name in zip(master, parameters, names):
+            weight.copy_(state['master'][name])
+            parameter.copy_(weight)
+    optimizer.load_state_dict(state['optimizer'])
+    random.setstate(state['python_rng'])
+    torch.set_rng_state(state['torch_rng'])
+    if state['cuda_rng']:
+        torch.cuda.set_rng_state_all(state['cuda_rng'])
+    progress['decay'] = None
+    return progress
+
+
 def evaluate(model, path, size, documents, device, stop=None):
     import torch
     stream = ChunkStream(path, size, max_documents=documents)
@@ -265,6 +306,14 @@ def preflight(config):
             blockers.append('patcher checkpoint must be an existing absolute path')
         elif Path(patcher['checkpoint']).with_suffix('.sha256').read_text().strip() != patcher['sha256']:
             blockers.append('patcher sha256 differs from the checkpoint sidecar')
+    branch = config.get('init_from')
+    if branch is not None:
+        if not isinstance(branch, dict) or set(branch) != {'checkpoint', 'sha256'}:
+            blockers.append('init_from needs checkpoint and sha256')
+        elif not Path(branch['checkpoint']).is_absolute() or not Path(branch['checkpoint']).is_file():
+            blockers.append('init_from checkpoint must be an existing absolute path')
+        elif Path(branch['checkpoint']).with_suffix('.sha256').read_text().strip() != branch['sha256']:
+            blockers.append('init_from sha256 differs from the checkpoint sidecar')
     for key in POSITIVE_INTEGERS:
         if type(config.get(key)) is not int or config[key] < 1:
             blockers.append(f'positive {key} required')
@@ -349,6 +398,8 @@ def run(config, resume=None, stop_after_steps=None, deadline=None):
     if resume:
         progress = restore(resume, parameters, names, master, optimizer, signature)
     else:
+        if config.get('init_from') is not None:
+            progress = branch_from(config, identity, parameters, names, master, optimizer)
         root.mkdir()
         (root / 'contract.json').write_text(json.dumps(identity, indent=2) + '\n')
         (root / 'trainable.json').write_text(json.dumps(

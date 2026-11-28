@@ -239,6 +239,40 @@ class BodyTraining(unittest.TestCase):
         trained = json.loads((straight / 'trainable.json').read_text())
         self.assertFalse(any(name.startswith('model.patcher.') for name in trained))
 
+    def test_branch_from_predecay_continues_like_a_longer_approved_run(self):
+        from blt_hf.body_train import run
+        parent, reference, branch = self.root / 'parent', self.root / 'reference', self.root / 'branch'
+        config = lambda run_dir, **overrides: body_config(self.root, self.model_path, self.manifest, run_dir,
+                                                          plateau_patience=1000, **overrides)
+        self.assertEqual(run(config(parent, max_steps=12)), 0)
+        predecay = parent / 'predecay-00000007.pt'
+        self.assertTrue(predecay.is_file())
+        self.assertEqual(run(config(reference, max_steps=20), stop_after_steps=10), 0)
+        start = {'checkpoint': str(predecay), 'sha256': predecay.with_suffix('.sha256').read_text().strip()}
+        self.assertEqual(run(config(branch, max_steps=20, init_from=start), stop_after_steps=3), 0)
+        load = lambda root: {event['step']: event for event in map(json.loads, (root / 'metrics.jsonl').read_text().splitlines())}
+        longer, continued = load(reference), load(branch)
+        self.assertEqual(sorted(continued), [8, 9, 10])
+        for step, event in continued.items():
+            self.assertEqual(event['exposed_bytes'], longer[step]['exposed_bytes'])
+            self.assertEqual(event['lr'], longer[step]['lr'])
+            self.assertAlmostEqual(event['byte_bpb'], longer[step]['byte_bpb'], delta=.02)
+        progress = torch.load(branch / 'step-00000010.pt', map_location='cpu', weights_only=True)['progress']
+        self.assertEqual([step for step, _ in progress['evaluations']], [0, 2, 4, 6, 8])
+        self.assertIsNone(progress['decay'])
+        self.assertTrue((branch / 'validation-00000008.json').is_file())
+        self.assertEqual(json.loads((branch / 'contract.json').read_text())['config']['init_from'], start)
+        with self.assertRaisesRegex(ValueError, 'init_from sha256'):
+            run(config(self.root / 'bad-hash', max_steps=20, init_from={**start, 'sha256': '0' * 64}))
+        with self.assertRaisesRegex(ValueError, 'beyond the run limits'):
+            run(config(self.root / 'bad-config', max_steps=20, init_from=start, lr=2e-3))
+        decayed = parent / 'step-00000010.pt'
+        with self.assertRaisesRegex(ValueError, 'decayed updates'):
+            run(config(self.root / 'decayed', max_steps=20, init_from={
+                'checkpoint': str(decayed), 'sha256': decayed.with_suffix('.sha256').read_text().strip()}))
+        for rejected in ('bad-hash', 'bad-config', 'decayed'):
+            self.assertFalse((self.root / rejected).exists())
+
     def test_export_matches_master_weights_and_loads_into_public_model(self):
         import shutil
         from safetensors.torch import load_file, save_file

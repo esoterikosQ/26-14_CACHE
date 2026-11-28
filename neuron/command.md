@@ -804,7 +804,44 @@ C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-
 sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
 ```
 
-## 14. 한국어 count 패처 자료 추출(T14)
+### 13-6. C 연장(상한 없이 정체 규칙으로만 decay)
+
+2026-11-28 사용자 결정: C는 step 상한 없이 정체 규칙(최근 10회 평가의 최저 개선 0.002 미만)로만 decay를 시작한다.
+30000 run의 decay는 그대로 마치고, 그 뒤 decay 직전 checkpoint `predecay-00027272.pt`에서 새 run으로 이어 간다.
+가중치·AdamW·RNG·자료 위치·경과 시간·검증 이력을 그대로 이어받아 정체 규칙도 끊김 없이 이어진다.
+바뀌는 것은 run 이름과 한도뿐이며, 나머지 설정·자료·모델이 다르면 학습 전에 멈춘다.
+한도 값은 필수 항목이라 train 자료 1회분(약 21만 step)과 100일로 넣었다. 실제로는 정체 규칙이 먼저 작동한다.
+
+**C 마지막 job(30000 step)이 끝나기 전에는 코드 갱신(2절)을 하지 않는다.** `body_train.py`가 바뀌어
+아직 시작하지 않은 C job은 재개 서명이 달라져 시작 직후 멈춘다. C가 끝난 뒤 갱신하고 아래를 실행한다.
+
+```bash
+ls -la outputs/korean_body/ko-body-full-run1-45-20261117-01/predecay-*
+python - <<'PY'
+import json
+from pathlib import Path
+source = Path('artifacts/korean_body/configs/ko-body-full-run1-45-20261117-01.json')
+predecay = Path('outputs/korean_body/ko-body-full-run1-45-20261117-01/predecay-00027272.pt').resolve()
+run_id = 'ko-body-full-run1-45-ext-20261128-01'
+config = json.loads(source.read_text())
+config.update(run_dir=str(Path('outputs/korean_body', run_id).resolve()),
+              init_from={'checkpoint': str(predecay), 'sha256': predecay.with_suffix('.sha256').read_text().strip()},
+              max_steps=215000, max_train_bytes=232722508043, max_seconds=8640000, max_run_bytes=300000000000)
+with Path(f'artifacts/korean_body/configs/{run_id}.json').open('x') as handle:
+    json.dump(config, handle, indent=2)
+    handle.write('\n')
+print(run_id)
+PY
+E=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-ext-20261128-01.json
+sbatch --time=24:00:00 --export=ALL,CONFIG=$E,MODE=train neuron/train_body.sh
+```
+
+첫 job은 step 27272부터 시작하며 로그의 최초 검증은 step 27500이다. 이후 job은 13-5와 같이 앞 job 번호로 이어 건다.
+
+```bash
+E=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-ext-20261128-01.json
+sbatch --dependency=afterany:이전_JOB_번호 --time=24:00:00 --export=ALL,CONFIG=$E,MODE=train,RESUME=latest neuron/train_body.sh
+```
 
 한국어 count 패처의 배경 count 표·교사 라벨·평가에 쓸 문서를 CPT 분할(run1 계약의 manifest)에서 뽑는다.
 적합·LMDB 구축은 itcerdo에서 하므로 여기서는 추출만 한다. cpu 파티션(CPU 4, 16GB, 최대 12시간)을 쓴다.
@@ -864,8 +901,7 @@ C=/scratch/r984a02/blt-cache/artifacts/korean_body/configs/ko-body-full-run1-45-
 sbatch --time=24:00:00 --export=ALL,CONFIG=$C,MODE=train,RESUME=latest neuron/train_body.sh
 ```
 
-코드를 갱신(2절)한 뒤 `blt-cache`에서 제출한다. C 마지막 job 번호를 알면 `--dependency=afterok:C_JOB_번호`를 붙여
-미리 걸어 둘 수 있다(정상 종료 때만 시작한다).
+C 마지막 job이 끝난 뒤 코드를 갱신(2절)하고 `blt-cache`에서 제출한다. 갱신을 C보다 먼저 하면 안 된다(13-6 주의).
 
 ```bash
 sbatch --export=ALL,RUN_ID=ko-body-full-run1-45-20261117-01 neuron/export_body.sh

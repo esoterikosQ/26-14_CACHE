@@ -5706,3 +5706,23 @@
 - de61030 [T05-T11][mac] Add English count-patcher evidence: evidence/english_*.json 52개. 가장 큰 파일은 english_blt_cpp_quality_20261029.json(22.7MB)과 english_blt_patcher_quality_20261028.json(15.0MB)이며 문서별 수치를 담는다. 생성 결과 파일에는 짧은 원문 접두부(약 211자)와 생성문이 들어 있다.
 - 0d96798 [T14][mac] Add C body export and Korean BLT comparison runner(9파일).
 - 이어서 문서(README, root command.md의 사용자 추가 절, docs, T13.plan.md, log.md, task.md)를 별도 커밋하고 push한다.
+
+## 2026-11-28 KST / C 학습 길이 검토(사용자 질문: 30000 step 종료가 합리적인가)
+
+- push 결과: 861bba7 [docs][mac] Update log, task, handoff and Korean preparation notes까지 origin/main에 올렸다.
+- 자료: C job 7개 로그(983536~996490)의 500 step 검증 BPB(같은 2000문서) 전체 이력.
+- 측정: 고정 lr(1e-4) 구간의 직선 기울기는 17000~22000에서 1000 step당 -0.00165, 22000~27000에서 -0.00161로 최근 10000 step 동안 줄지 않았다. 5000 step마다 최저값은 5000 0.7881, 10000 0.7529, 15000 0.7290, 20000 0.7195, 25000 0.7082, 27000 0.7062다. 개별 평가의 흔들림은 곡선 적합 잔차 표준편차로 약 0.0024다.
+- 사용자 정체 규칙(최근 10회 최저 개선 0.002 미만)은 27000에서 0.0086(22000까지 최저 0.7148 → 0.7062)이라 성립하지 않았다. decay는 max_steps 30000 상한 때문에 27272에서 시작했다. 27272 이후의 하락(28000 0.7009)은 주로 lr decay 효과로 보며, 고정 lr 학습이 계속 좋아진다는 근거는 위 기울기다.
+- 추정(가설, 외삽): 거듭제곱 곡선 적합(시작 2000/5000/10000 step)으로 고정 lr을 27000에서 더 이어 갈 때의 개선은 40000까지 약 0.005~0.017, 50000까지 약 0.007~0.026, 60000까지 약 0.008~0.033 BPB다. 직선 유지 가정은 이보다 크다(40000까지 약 0.021). 곡선 형태에 따라 폭이 크다.
+- 비용(측정 처리량 기준): 1000 step당 약 5.8시간, 24시간 job 하나에 약 4040 step. 27272에서 40000/50000/60000까지 각 12728/22728/32728 step으로 약 3.2/5.6/8.1일(대기열 간격 제외). train split 232.7GB 중 노출은 50000 step에서도 약 52GB라 반복은 없다.
+- 방법 검토: 현재 run은 이미 decay 중이고 max_steps가 계약 서명에 들어 있어 같은 run에서 늘릴 수 없다. predecay-00027272.pt(고정 lr 상태의 FP32 master·AdamW·자료 위치)에서 새 run으로 이어 가면 지금의 30000 decay 결과를 버리지 않고 decay 시점만 뒤로 옮길 수 있다. body_train에는 이 이어받기(init_from) 경로가 아직 없다. 상한·병행 여부는 사용자 결정 대기.
+
+## 2026-11-28 KST / C 연장 결정과 decay 전 checkpoint 이어받기(init_from) 구현
+
+- 사용자 결정: C는 step 상한 없이 정체 규칙(최근 10회 평가 최저 개선 0.002 미만)으로만 decay를 시작한다. 연장은 30000 decay가 끝난 뒤 돌리는 쪽을 선호하며, 대기 중 job을 모두 취소하고 predecay에서 바로 시작해도 되는지 질문했다.
+- 답변 요지: 취소해도 연장 자체에 잃는 것은 없다. 잃는 것은 약 10 GPU시간으로 얻는 30000 decay 본체이며, 이는 T14 BLT 비교에 곧 쓸 수 있는 본체이자 같은 decay 절차로 만든 "짧은 학습" 기준점이다(연장 본체와 decay 대 decay로 학습 길이 효과를 비교할 수 있음). 연장 코드는 C 마지막 job이 끝난 뒤에만 Neuron에 반영할 수 있다(아래 주의).
+- 구현(neuron/runtime/blt_hf/body_train.py): config `init_from` {checkpoint, sha256}과 preflight 검사, `branch_from`. checkpoint·sidecar·설정의 SHA, 부모 contract 서명, 한도 키(run_dir, max_steps, max_train_bytes, max_seconds, max_run_bytes, init_from)를 뺀 설정 전체, manifest·가중치·config·학습 목록 SHA가 부모와 같아야 한다. decay 시작 뒤 갱신이 들어간 checkpoint는 거부한다. FP32 master·AdamW·RNG·자료 위치·경과 시간·검증 이력을 이어받고 예정 decay를 지운다. 새 run 시작 때만 적용하고, 이후 job은 기존 RESUME=latest로 이어 간다.
+- 테스트(itcerdo 검증 사본, phdq_blt_hf): tiny 모델 부모 run(max_steps 12, step 7부터 decay)의 predecay-00000007에서 max_steps 20으로 이어 간 run의 step 8~10이, 처음부터 max_steps 20으로 승인한 run과 exposed bytes·lr이 같고 byte_bpb 차이가 0.02 이내다. 이어받은 검증 이력은 step [0, 2, 4, 6, 8], decay 없음. 잘못된 SHA, 한도 밖 설정 변경(lr), decay 뒤 checkpoint는 run 디렉터리를 만들기 전에 거부한다. body_train 테스트 9개, runtime 53개, bundle 6개 통과. runtime-manifest를 refresh했다(30파일).
+- 명령표 13-6 추가: 연장 run ko-body-full-run1-45-ext-20261128-01, 설정은 C 설정 그대로에 init_from과 한도만 바꾼다. 한도는 필수 항목이라 상한으로 작동하지 않게 잡았다: max_steps 215000(train 1회분 안에서 decay까지 끝나는 값), max_train_bytes 232722508043(train 1회분), max_seconds 8640000(100일), max_run_bytes 3e11.
+- 주의: body_train.py는 C 계약의 source 목록에 들어 있다. 아직 시작하지 않은 C job이 새 코드로 시작하면 서명이 달라져 멈춘다. Neuron 코드 갱신은 C 마지막 job이 끝난 뒤에 한다(명령표 13-6·15절). 실행 중인 job은 시작 때만 서명을 확인한다.
+- 추정(가설): 곡선 적합 기울기가 1000 step당 0.0004(10회 구간 0.002)로 줄어드는 지점은 약 55000~95000 step이다. decay(10%)까지 27272부터 약 3.4만~7.5만 step, GPU 약 8~18일(대기열 제외)이다. 평가 흔들림(약 0.0024) 때문에 실제 발동은 앞뒤로 달라질 수 있다.
